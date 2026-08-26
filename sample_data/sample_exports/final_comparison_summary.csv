@@ -1,0 +1,21 @@
+﻿session_id,구분,측정 항목,Skeleton 평균값,Skeleton 단위,MotionMetrix 값,MotionMetrix 단위,차이값(Skeleton-MM),비교 상태,비고
+SAMPLE_001,측면,척추기울기,,deg,5.2,deg,,Skeleton 평균값 없음,
+SAMPLE_001,측면,오버스트라이드 평균,,px,109.0,mm,,Skeleton 평균값 없음,Skeleton은 px 기준입니다. mm 보정 학습 전에는 직접 차이 계산하지 않습니다.
+SAMPLE_001,측면,수직진폭 평균,,px,72.5,mm,,Skeleton 평균값 없음,MotionMetrix 입력 단위는 mm입니다. Skeleton은 보정 전 px 기준입니다.
+SAMPLE_001,측면,정강이 각도 평균,,deg,7.5,deg,,Skeleton 평균값 없음,
+SAMPLE_001,측면,착지시 무릎 굴곡각 평균,,deg,22.5,deg,,Skeleton 평균값 없음,
+SAMPLE_001,측면,고관절 ROM 전체평균,,deg,59.0,deg,,Skeleton 평균값 없음, / 자동계산
+SAMPLE_001,측면,고관절 ROM 좌우차이,,deg,2.0,deg,,Skeleton 평균값 없음, / 자동계산
+SAMPLE_001,측면,슬관절 ROM 전체평균,,deg,72.0,deg,,Skeleton 평균값 없음, / 자동계산
+SAMPLE_001,측면,슬관절 ROM 좌우차이,,deg,2.0,deg,,Skeleton 평균값 없음, / 자동계산
+SAMPLE_001,측면,케이던스 평균,,steps/min,170.0,steps/min,,Skeleton 평균값 없음,
+SAMPLE_001,측면,지면접촉시간 평균,,ms,246.5,ms,,Skeleton 평균값 없음,
+SAMPLE_001,측면,제동력 평균,,,0.18,FV,,MotionMetrix 입력값 / 3차 학습 정답,MotionMetrix 평균값을 학습 정답으로 사용합니다.
+SAMPLE_001,측면,착지 타입,,candidate,midfoot,manual,,Skeleton 평균값 없음,MotionMetrix 비교값이 아니라 고객 수동 라벨입니다.
+SAMPLE_001,후면,골반낙하 평균,,deg,4.5,deg,,Skeleton 평균값 없음,
+SAMPLE_001,후면,무릎안쪽붕괴 평균,,px,1.25,raw,,Skeleton 평균값 없음,MotionMetrix/수동 기준 단위와 Skeleton px 기준이 다를 수 있습니다.
+SAMPLE_001,후면,스텝 폭 평균,,px,80.0,mm,,Skeleton 평균값 없음,Skeleton은 px 기준입니다. mm 보정 전 직접 차이 계산하지 않습니다.
+SAMPLE_001,후면,크로스오버,,ratio,none,manual,,Skeleton 평균값 없음,
+SAMPLE_001,후면,몸통 좌우 기울기 평균,,deg,2.25,deg,,Skeleton 평균값 없음,
+SAMPLE_001,종합,러닝효율,,,3.05,J/kg/m,,MotionMetrix 입력값 / 3차 학습 정답,여러 Skeleton feature를 이용해 3차에서 예측할 MotionMetrix 정답값입니다.
+SAMPLE_001,종합,러닝타입,,,Quick Stepper,class,,MotionMetrix 입력값 / 3차 학습 정답,3차 분류 모델의 MotionMetrix 기준 정답값입니다.

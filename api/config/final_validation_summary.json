@@ -1,0 +1,28 @@
+{
+  "version": "final",
+  "evaluated_patients": 14,
+  "excluded_patients": {
+    "count": 1,
+    "reason": "Anthropometric metadata anomaly"
+  },
+  "overstride": {
+    "mae_mm": 19.15269505748062,
+    "bias_mm": -10.084850862213736,
+    "rmse_mm": 23.835587182022806,
+    "coverage": 1.0,
+    "target_mae_mm": 20.0,
+    "pass": true
+  },
+  "strike": {
+    "labeled_feet": 28,
+    "overall_accuracy_review_as_failure": 0.8571428571428571,
+    "coverage": 0.9285714285714286,
+    "decided_accuracy": 0.9230769230769231,
+    "review_threshold": 0.41,
+    "target_accuracy": 0.8,
+    "pass": true
+  },
+  "core_targets_pass": true,
+  "independent_fingerprint": "186aac9f5979f82aa17e53260aed89489718f073dd0299a0b30a29f277328ce2",
+  "privacy_note": "Patient identifiers and patient-level anthropometric values are omitted from the public deployment repository. Detailed audit evidence is retained in the customer delivery package."
+}

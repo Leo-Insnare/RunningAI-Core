@@ -1,0 +1,16 @@
+streamlit>=1.36.0,<2.0.0
+pandas>=2.0.0,<3.0.0
+numpy>=1.26.0,<2.0.0
+pillow>=10.0.0,<13.0.0
+opencv-contrib-python>=4.8.0,<4.12.0
+protobuf>=4.25.3,<5.0.0
+mediapipe==0.10.21; python_version >= "3.9" and python_version < "3.13"
+streamlit-webrtc>=0.47.0; python_version < "3.13"
+av>=11.0.0; python_version < "3.13"
+imageio-ffmpeg>=0.4.9,<1.0.0
+openpyxl>=3.1.0,<4.0.0
+requests>=2.31.0,<3.0.0
+pydantic>=2.8,<3
+scikit-learn==1.6.1
+joblib==1.4.2
+torch>=2.11,<2.12

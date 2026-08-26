@@ -1,0 +1,19 @@
+{
+  "frozen_at": "2026-08-25T06:34:18.598290",
+  "development_patient_count": 51,
+  "overstride_model_sha256": "5b47e6313e2935e558a091635ab70e27a66b9d3acc68fab76a5a782b644b5358",
+  "overstride_features": [
+    "base_pred_v016",
+    "knee_landing_event_median_deg",
+    "thigh_flexion_recalc_deg",
+    "hip_rom_recalc_deg"
+  ],
+  "overstride_ridge_alpha": 100.0,
+  "overstride_high_target_weight": 2.0,
+  "strike_review_threshold": 0.41,
+  "strike_anchor_sha256": "ed5ed6e8b28c5cdc76cfb7ce8a400d8c5449eb23e5c0a472c2a119070abfa66f",
+  "strike_rescue_sha256": "34847790c04e5e551d6091a938d35def00a286e204dad18f695a2bd16b5f84ed",
+  "base_overstride_sha256": "a991fdb4e452154a645b2964e570273bf560a52466e7e8f76b3bbdcca70a8f6e",
+  "policy": "Independent data are not used for fitting, feature selection, threshold selection or calibration in this notebook.",
+  "privacy_note": "Development patient identifiers are omitted from the public deployment repository. The development cohort size and frozen model parameters are retained for reproducibility."
+}

@@ -1,0 +1,19 @@
+{
+  "lock_version": "v1.3",
+  "fingerprint_version": "v2-stable-package-hash",
+  "locked_at": "2026-08-25T06:34:56.534742",
+  "independent_fingerprint": "186aac9f5979f82aa17e53260aed89489718f073dd0299a0b30a29f277328ce2",
+  "frozen_artifact_sha256": {
+    "overstride_final_model.joblib": "5b47e6313e2935e558a091635ab70e27a66b9d3acc68fab76a5a782b644b5358",
+    "overstride_cv_ensemble_candidate_v0_16.joblib": "a991fdb4e452154a645b2964e570273bf560a52466e7e8f76b3bbdcca70a8f6e",
+    "strike_anchor_supcon_15model_v0_16.pt": "ed5ed6e8b28c5cdc76cfb7ce8a400d8c5449eb23e5c0a472c2a119070abfa66f",
+    "strike_forefoot_heel_rescue_5model_v0_16.joblib": "34847790c04e5e551d6091a938d35def00a286e204dad18f695a2bd16b5f84ed"
+  },
+  "received_patient_count": 15,
+  "evaluated_patient_count": 14,
+  "excluded_final_count": 1,
+  "development_patient_count": 51,
+  "exclusion_policy": "One final-validation case was excluded before scoring due to an anthropometric metadata anomaly.",
+  "policy": "Frozen final artifacts. No training, tuning, threshold change or calibration after independent cohort loading.",
+  "privacy_note": "Original filenames and patient identifiers were removed from the public deployment repository. Detailed patient-level audit evidence is retained only in the customer delivery package."
+}

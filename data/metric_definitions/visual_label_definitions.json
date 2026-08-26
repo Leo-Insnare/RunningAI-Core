@@ -1,0 +1,22 @@
+{
+  "strength_options": [
+    {"value": "none", "label_kr": "없음"},
+    {"value": "mild", "label_kr": "약함"},
+    {"value": "clear", "label_kr": "뚜렷함"},
+    {"value": "severe", "label_kr": "심함"}
+  ],
+  "direction_options": [
+    {"value": "not_applicable", "label_kr": "해당 없음"},
+    {"value": "left", "label_kr": "왼쪽"},
+    {"value": "right", "label_kr": "오른쪽"},
+    {"value": "both", "label_kr": "양쪽"}
+  ],
+  "labels": [
+    {"label_id": "running_like_walking", "display_name_kr": "걷듯이 뛴다", "required_level": "manual_core"},
+    {"label_id": "waddling", "display_name_kr": "뒤뚱거린다", "required_level": "manual_core"},
+    {"label_id": "left_right_asymmetry", "display_name_kr": "좌우 비대칭", "required_level": "manual_core"},
+    {"label_id": "arm_motion_asymmetry", "display_name_kr": "팔 동작 비대칭", "required_level": "manual_core"},
+    {"label_id": "upper_body_lateral_sway", "display_name_kr": "상체 좌우 흔들림", "required_level": "manual_core"},
+    {"label_id": "insufficient_knee_lift", "display_name_kr": "무릎 상승 부족", "required_level": "manual_core"}
+  ]
+}

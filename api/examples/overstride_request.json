@@ -1,0 +1,23 @@
+{
+  "session_id": "sample-session-001",
+  "patient_meta": {
+    "patient_id": "sample-001",
+    "height_cm": 175,
+    "weight_kg": 70,
+    "running_speed_kmh": 9.0,
+    "video_fps": 60
+  },
+  "quality_tier": "usable",
+  "features": {
+    "os_clip_selected_mm": 72.0,
+    "os_event_abs_mean_mm": 70.0,
+    "os_event_abs_iqr_mm": 8.0,
+    "os_lr_abs_diff_mm": 5.0,
+    "foot_angle_abs_median_deg": 12.0,
+    "shank_angle_abs_median_deg": 7.0,
+    "knee_landing_event_median_deg": 18.0,
+    "side_pose_rate": 0.98,
+    "thigh_flexion_recalc_deg": 30.0,
+    "hip_rom_recalc_deg": 48.0
+  }
+}

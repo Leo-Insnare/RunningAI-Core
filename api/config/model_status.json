@@ -1,0 +1,9 @@
+{
+  "model_version": "final-20260825",
+  "final_independent_test_completed": true,
+  "final_independent_targets_met": true,
+  "final_independent_fingerprint": "186aac9f5979f82aa17e53260aed89489718f073dd0299a0b30a29f277328ce2",
+  "overstride_mae_mm": 19.15269505748062,
+  "strike_accuracy": 0.8571428571428571,
+  "review_confidence_threshold": 0.41
+}

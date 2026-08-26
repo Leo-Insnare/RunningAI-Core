@@ -1,0 +1,38 @@
+{
+  "keypoints": [
+    {"id": 7, "name_kr": "왼쪽 귀 또는 머리 기준 후보", "name_en": "left ear / head candidate", "group": "head"},
+    {"id": 8, "name_kr": "오른쪽 귀 또는 머리 기준 후보", "name_en": "right ear / head candidate", "group": "head"},
+    {"id": 11, "name_kr": "왼쪽 어깨", "name_en": "left shoulder", "group": "upper_body"},
+    {"id": 12, "name_kr": "오른쪽 어깨", "name_en": "right shoulder", "group": "upper_body"},
+    {"id": 13, "name_kr": "왼쪽 팔꿈치", "name_en": "left elbow", "group": "arm"},
+    {"id": 14, "name_kr": "오른쪽 팔꿈치", "name_en": "right elbow", "group": "arm"},
+    {"id": 15, "name_kr": "왼쪽 손목", "name_en": "left wrist", "group": "arm"},
+    {"id": 16, "name_kr": "오른쪽 손목", "name_en": "right wrist", "group": "arm"},
+    {"id": 23, "name_kr": "왼쪽 골반", "name_en": "left hip", "group": "pelvis"},
+    {"id": 24, "name_kr": "오른쪽 골반", "name_en": "right hip", "group": "pelvis"},
+    {"id": 25, "name_kr": "왼쪽 무릎", "name_en": "left knee", "group": "leg"},
+    {"id": 26, "name_kr": "오른쪽 무릎", "name_en": "right knee", "group": "leg"},
+    {"id": 27, "name_kr": "왼쪽 발목", "name_en": "left ankle", "group": "foot"},
+    {"id": 28, "name_kr": "오른쪽 발목", "name_en": "right ankle", "group": "foot"},
+    {"id": 29, "name_kr": "왼쪽 뒤꿈치", "name_en": "left heel", "group": "foot"},
+    {"id": 30, "name_kr": "오른쪽 뒤꿈치", "name_en": "right heel", "group": "foot"},
+    {"id": 31, "name_kr": "왼쪽 발끝", "name_en": "left foot index", "group": "foot"},
+    {"id": 32, "name_kr": "오른쪽 발끝", "name_en": "right foot index", "group": "foot"}
+  ],
+  "derived_points": [
+    {"id": "head_point", "name_kr": "머리 기준점", "definition_kr": "ear 7 또는 8 중 화면에서 더 안정적으로 검출되는 포인트"},
+    {"id": "shoulder_center", "name_kr": "어깨 중심", "definition_kr": "11번과 12번의 중점"},
+    {"id": "pelvis_center", "name_kr": "골반 중심", "definition_kr": "23번과 24번의 중점"},
+    {"id": "trunk_line", "name_kr": "몸통선", "definition_kr": "골반 중심에서 어깨 중심으로 이어지는 선"},
+    {"id": "pelvis_line", "name_kr": "골반선", "definition_kr": "23번과 24번을 연결한 선"},
+    {"id": "left_arm_line", "name_kr": "왼팔선", "definition_kr": "11번-13번-15번"},
+    {"id": "right_arm_line", "name_kr": "오른팔선", "definition_kr": "12번-14번-16번"},
+    {"id": "left_leg_line", "name_kr": "왼다리선", "definition_kr": "23번-25번-27번"},
+    {"id": "right_leg_line", "name_kr": "오른다리선", "definition_kr": "24번-26번-28번"},
+    {"id": "left_foot_line", "name_kr": "왼발선", "definition_kr": "27번-29번-31번"},
+    {"id": "right_foot_line", "name_kr": "오른발선", "definition_kr": "28번-30번-32번"},
+    {"id": "ground_line", "name_kr": "지면선", "definition_kr": "트레드밀 또는 실제 지면 기준선"},
+    {"id": "vertical_axis", "name_kr": "수직축", "definition_kr": "화면 또는 보정 좌표계 기준 수직선"},
+    {"id": "contact_events", "name_kr": "착지 이벤트", "definition_kr": "뒤꿈치 또는 발끝이 지면에 접촉하는 시점"}
+  ]
+}

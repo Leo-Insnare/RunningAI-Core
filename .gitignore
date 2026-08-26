@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.venv/
+.env
+.DS_Store
+data/sessions/*
+exports/*
+!data/sessions/.gitkeep
+!exports/.gitkeep
+
+.streamlit/secrets.toml
+modeling/config/development_context.json

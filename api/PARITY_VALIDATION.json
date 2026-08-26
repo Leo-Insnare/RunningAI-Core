@@ -1,0 +1,58 @@
+{
+  "model_version": "final-20260825",
+  "api_version": "v1.4.0",
+  "development_debug_export_packages": 20,
+  "strike_event_sequences_compared": 294,
+  "strike_sequence_shape": [
+    21,
+    17
+  ],
+  "strike_sequence_max_absolute_difference": 0.0,
+  "strike_sequence_nan_pattern_mismatch_events": 0,
+  "strike_rule_class_mismatch_events": 0,
+  "strike_foot_event_count_mismatch_groups": 0,
+  "cadence_patients_compared": 20,
+  "cadence_max_absolute_difference_spm": 2.842170943040401e-14,
+  "canonical_passthrough_fields": [
+    "overstride_avg_mm_est",
+    "overstride_trimmed_mean_mm_est",
+    "overstride_selected_mm_est",
+    "actual_video_fps"
+  ],
+  "canonical_passthrough_max_absolute_difference": 0.0,
+  "pose_detection_rate_recalc_vs_rounded_summary_max_absolute_difference": 0.0004429530201343068,
+  "pose_detection_rate_tolerance": 0.001,
+  "patient_ids_written_to_report": false,
+  "source_patient_data_in_repository": false,
+  "pass": true,
+  "api_contract_review": {
+    "overstride_patient_meta_mapping": true,
+    "strike_local_and_final_outputs_separated": true,
+    "openapi_bearer_security_scheme": true
+  },
+  "package_test_suite": {
+    "tests_passed": 14,
+    "tests_failed": 0
+  },
+  "single_reference_debug_export_check": {
+    "adapter_deterministic": true,
+    "adapter_http_match": true,
+    "overstride_direct_api_match": true,
+    "strike_direct_api_match": true,
+    "strike_events_compared": 14,
+    "sequence_max_absolute_difference": 0.0,
+    "sequence_nan_pattern_mismatch_events": 0,
+    "rule_class_mismatch_events": 0,
+    "pass": true
+  },
+  "frozen_artifact_sha256": {
+    "overstride_cv_ensemble_candidate_v0_16.joblib": "a991fdb4e452154a645b2964e570273bf560a52466e7e8f76b3bbdcca70a8f6e",
+    "strike_anchor_supcon_15model_v0_16.pt": "ed5ed6e8b28c5cdc76cfb7ce8a400d8c5449eb23e5c0a472c2a119070abfa66f",
+    "strike_forefoot_heel_rescue_5model_v0_16.joblib": "34847790c04e5e551d6091a938d35def00a286e204dad18f695a2bd16b5f84ed"
+  },
+  "model_artifacts_modified_for_api_v1_2": false,
+  "final_independent_test_completed": true,
+  "final_independent_targets_met": true,
+  "final_overstride_inference_artifact_sha256": "28620dd49f639c829656a2dd95e32a373805600a88ae556e1064e0a955ddfcf3",
+  "strike_review_threshold": 0.41
+}

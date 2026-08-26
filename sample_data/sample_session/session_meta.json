@@ -1,0 +1,16 @@
+{
+  "session_id": "SAMPLE_001",
+  "user_id": "USER_SAMPLE_001",
+  "age": 35,
+  "sex": "male",
+  "height_cm": 175,
+  "weight_kg": 70,
+  "running_speed_kmh": 10,
+  "side_video_fps": 120,
+  "rear_video_fps": 120,
+  "measurement_date": "2026-07-01",
+  "side_measure_start_sec": 5,
+  "side_measure_end_sec": 30,
+  "rear_measure_start_sec": 5,
+  "rear_measure_end_sec": 30
+}

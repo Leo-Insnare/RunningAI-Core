@@ -1,0 +1,24 @@
+{
+  "version": "integration-v1.4.0",
+  "fixture": "synthetic_debug_export",
+  "checks": {
+    "embedded_export_parity": true,
+    "workbook_model_sheet": true,
+    "workbook_model_value": true,
+    "ui_mapping_overstride": true,
+    "ui_mapping_strike": true,
+    "posture_metric_contract": true,
+    "duration_limit_60": true,
+    "final_output_ui_contract": true,
+    "final_export_model_result_contract": true,
+    "motionmetrix_comparison_contract": true,
+    "api_startup": true,
+    "artifact_integrity": true,
+    "embedded_api_parity": true,
+    "raw_video_api_contract": true,
+    "raw_video_api_auth": true,
+    "streamlit_startup": true
+  },
+  "raw_video_media_e2e": "run separately with a valid running MP4 before final merge",
+  "pass": true
+}

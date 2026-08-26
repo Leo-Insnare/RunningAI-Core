@@ -1,0 +1,17 @@
+{
+  "model_version": "final-20260825",
+  "api_version": "v1.4.0",
+  "canonical_overstride_model_sha256": "5b47e6313e2935e558a091635ab70e27a66b9d3acc68fab76a5a782b644b5358",
+  "api_overstride_inference_artifact_sha256": "28620dd49f639c829656a2dd95e32a373805600a88ae556e1064e0a955ddfcf3",
+  "independent_fingerprint": "186aac9f5979f82aa17e53260aed89489718f073dd0299a0b30a29f277328ce2",
+  "patients_compared": 14,
+  "max_absolute_prediction_difference_mm": 2.842170943040401e-14,
+  "overstride_final_mae_mm": 19.15269505748062,
+  "overstride_target_mae_mm": 20.0,
+  "overstride_pass": true,
+  "strike_final_accuracy": 0.8571428571428571,
+  "strike_target_accuracy": 0.8,
+  "strike_pass": true,
+  "strike_review_threshold": 0.41,
+  "pass": true
+}

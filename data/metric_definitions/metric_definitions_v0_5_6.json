@@ -1,0 +1,972 @@
+{
+  "version": "0.5.5",
+  "session_meta": [
+    {
+      "field_id": "session_id",
+      "label_kr": "세션 ID",
+      "type": "text",
+      "unit": "",
+      "required": true
+    },
+    {
+      "field_id": "user_id",
+      "label_kr": "사용자 ID",
+      "type": "text",
+      "unit": "",
+      "required": true
+    },
+    {
+      "field_id": "age",
+      "label_kr": "나이",
+      "type": "number",
+      "unit": "years",
+      "required": true
+    },
+    {
+      "field_id": "sex",
+      "label_kr": "성별",
+      "type": "select",
+      "unit": "",
+      "required": true,
+      "options": [
+        "male",
+        "female",
+        "other",
+        "unknown"
+      ]
+    },
+    {
+      "field_id": "height_cm",
+      "label_kr": "키",
+      "type": "number",
+      "unit": "cm",
+      "required": true
+    },
+    {
+      "field_id": "weight_kg",
+      "label_kr": "체중",
+      "type": "number",
+      "unit": "kg",
+      "required": true
+    },
+    {
+      "field_id": "running_speed_kmh",
+      "label_kr": "달리기 속도",
+      "type": "number",
+      "unit": "km/h",
+      "required": true
+    },
+    {
+      "field_id": "side_video_fps",
+      "label_kr": "측면 영상 FPS",
+      "type": "number",
+      "unit": "fps",
+      "required": false
+    },
+    {
+      "field_id": "rear_video_fps",
+      "label_kr": "후면 영상 FPS",
+      "type": "number",
+      "unit": "fps",
+      "required": false
+    },
+    {
+      "field_id": "side_progress_direction",
+      "label_kr": "측면 영상 진행 방향",
+      "type": "select",
+      "unit": "",
+      "required": false,
+      "options": [
+        "left_to_right",
+        "right_to_left"
+      ],
+      "ui_help_kr": "Forward Lean, Overstride, Shank Angle 부호 보정을 위해 사용합니다."
+    },
+    {
+      "field_id": "side_ground_y_px",
+      "label_kr": "측면 수동 지면선 y좌표",
+      "type": "number",
+      "unit": "px",
+      "required": false
+    },
+    {
+      "field_id": "rear_ground_y_px",
+      "label_kr": "후면 수동 지면선 y좌표",
+      "type": "number",
+      "unit": "px",
+      "required": false
+    },
+    {
+      "field_id": "contact_threshold_px",
+      "label_kr": "발 접촉 허용 오차",
+      "type": "number",
+      "unit": "px",
+      "required": false
+    },
+    {
+      "field_id": "measurement_date",
+      "label_kr": "측정일",
+      "type": "date",
+      "unit": "",
+      "required": false
+    },
+    {
+      "field_id": "side_measure_start_sec",
+      "label_kr": "측면 측정 시작",
+      "type": "number",
+      "unit": "sec",
+      "required": false
+    },
+    {
+      "field_id": "side_measure_end_sec",
+      "label_kr": "측면 측정 종료",
+      "type": "number",
+      "unit": "sec",
+      "required": false
+    },
+    {
+      "field_id": "rear_measure_start_sec",
+      "label_kr": "후면 측정 시작",
+      "type": "number",
+      "unit": "sec",
+      "required": false
+    },
+    {
+      "field_id": "rear_measure_end_sec",
+      "label_kr": "후면 측정 종료",
+      "type": "number",
+      "unit": "sec",
+      "required": false
+    }
+  ],
+  "metrics": [
+    {
+      "metric_id": "forward_lean_deg",
+      "display_name_kr": "척추 기울기 / 몸통 전방 기울기",
+      "display_name_en": "Forward Lean",
+      "category": "side_biomechanics",
+      "view": "side",
+      "source_type": "motionmetrix_target",
+      "model_role": "target_regression",
+      "required_level": "core",
+      "required_points": [
+        11,
+        12,
+        23,
+        24
+      ],
+      "derived_points": [
+        "shoulder_center",
+        "pelvis_center",
+        "trunk_line",
+        "vertical_axis"
+      ],
+      "calculation_basis_kr": "골반 중심에서 어깨 중심으로 이어지는 선과 화면 수직선 사이의 각도",
+      "ui_help_kr": "0°는 몸통 수직, +값은 진행 방향 전방 기울기, -값은 후방 기울기입니다.",
+      "fields": [
+        {
+          "field_id": "forward_lean_deg",
+          "label_kr": "MotionMetrix Forward Lean",
+          "type": "number",
+          "unit": "deg",
+          "required": true
+        }
+      ]
+    },
+    {
+      "metric_id": "arm_swing_symmetry",
+      "display_name_kr": "팔 스윙 대칭성",
+      "display_name_en": "Arm Swing Symmetry",
+      "category": "side_manual_or_derived",
+      "view": "side",
+      "source_type": "manual_label",
+      "model_role": "manual_label",
+      "required_level": "recommended",
+      "required_points": [
+        11,
+        12,
+        13,
+        14,
+        15,
+        16
+      ],
+      "derived_points": [
+        "left_arm_line",
+        "right_arm_line"
+      ],
+      "calculation_basis_kr": "좌우 팔꿈치 각도 범위와 좌우 손목의 앞뒤 스윙 범위 비교",
+      "ui_help_kr": "MotionMetrix 정답값이 아닌 수동 평가값입니다.",
+      "fields": [
+        {
+          "field_id": "arm_swing_symmetry_grade",
+          "label_kr": "팔 스윙 대칭성 평가",
+          "type": "select",
+          "unit": "",
+          "required": false,
+          "options": [
+            "normal",
+            "mild_asymmetry",
+            "clear_asymmetry",
+            "severe_asymmetry",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "arm_swing_symmetry_memo",
+          "label_kr": "메모",
+          "type": "text",
+          "unit": "",
+          "required": false
+        }
+      ]
+    },
+    {
+      "metric_id": "overstride",
+      "display_name_kr": "오버스트라이드",
+      "display_name_en": "Overstride",
+      "category": "side_biomechanics",
+      "view": "side",
+      "source_type": "motionmetrix_target",
+      "model_role": "target_regression",
+      "required_level": "core",
+      "required_points": [
+        23,
+        24,
+        27,
+        28
+      ],
+      "derived_points": [
+        "pelvis_center",
+        "pelvis_vertical_projection",
+        "landing_ankle"
+      ],
+      "calculation_basis_kr": "골반 중심의 지면 수직 투영점과 착지 순간 발목 사이의 지면 수평거리",
+      "ui_help_kr": "좌우값은 입력하지 않고 MotionMetrix에 표시된 오버스트라이드 전체 평균값만 입력합니다. Skeleton 평균값은 최종 비교표에서 함께 표시됩니다.",
+      "fields": [
+        {
+          "field_id": "overstride_mean_mm",
+          "label_kr": "MotionMetrix 오버스트라이드 평균값",
+          "type": "number",
+          "unit": "mm",
+          "required": true
+        }
+      ]
+    },
+    {
+      "metric_id": "braking_force",
+      "display_name_kr": "제동력",
+      "display_name_en": "Braking Force",
+      "category": "side_biomechanics",
+      "view": "side",
+      "source_type": "motionmetrix_target",
+      "model_role": "target_regression",
+      "required_level": "core",
+      "required_points": [
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32
+      ],
+      "derived_points": [
+        "pelvis_center",
+        "landing_ankle",
+        "knee_angle_at_landing",
+        "shank_angle_at_landing",
+        "foot_strike_angle",
+        "contact_time"
+      ],
+      "calculation_basis_kr": "착지 시점, 초기 지지 구간, 골반-발목 수평거리, 무릎각, 정강이 기울기, 착지 형태, 접촉시간 등을 종합해 추론",
+      "ui_help_kr": "MotionMetrix에 표시된 값을 그대로 입력하고 원본 단위도 함께 저장합니다.",
+      "fields": [
+        {
+          "field_id": "braking_force_mean_value",
+          "label_kr": "MotionMetrix 평균값",
+          "type": "number",
+          "unit": "raw",
+          "required": true
+        },
+        {
+          "field_id": "braking_force_unit",
+          "label_kr": "표시 단위",
+          "type": "select",
+          "unit": "",
+          "required": true,
+          "options": [
+            "FV",
+            "bodyweight_fraction",
+            "N",
+            "motionmetrix_raw",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    {
+      "metric_id": "hip_thigh_flexion_extension",
+      "display_name_kr": "고관절/대퇴 굴곡·신전",
+      "display_name_en": "Hip / Thigh Flexion Extension",
+      "category": "side_joint_rom",
+      "view": "side",
+      "source_type": "motionmetrix_target",
+      "model_role": "target_regression",
+      "required_level": "core",
+      "required_points": [
+        23,
+        24,
+        25,
+        26
+      ],
+      "derived_points": [
+        "left_thigh_line",
+        "right_thigh_line",
+        "vertical_axis"
+      ],
+      "calculation_basis_kr": "고관절-무릎 대퇴선이 수직선 기준으로 전방/후방으로 움직인 최대 각도",
+      "ui_help_kr": "고객은 굴곡과 신전만 입력합니다. 좌/우 ROM, 전체 평균, 좌우 차이는 자동 계산되어 최종 비교표와 export에 반영됩니다.",
+      "fields": [
+        {
+          "field_id": "left_thigh_flexion_max_deg",
+          "label_kr": "왼쪽 최대 굴곡",
+          "type": "number",
+          "unit": "deg",
+          "required": true
+        },
+        {
+          "field_id": "left_thigh_extension_max_deg",
+          "label_kr": "왼쪽 최대 신전",
+          "type": "number",
+          "unit": "deg",
+          "required": true
+        },
+        {
+          "field_id": "right_thigh_flexion_max_deg",
+          "label_kr": "오른쪽 최대 굴곡",
+          "type": "number",
+          "unit": "deg",
+          "required": true
+        },
+        {
+          "field_id": "right_thigh_extension_max_deg",
+          "label_kr": "오른쪽 최대 신전",
+          "type": "number",
+          "unit": "deg",
+          "required": true
+        }
+      ],
+      "ui_note_kr": "MotionMetrix Gait Characteristics 화면의 Max Thigh Flexion/Extension 값을 입력합니다. ROM은 굴곡+신전으로 자동 계산됩니다."
+    },
+    {
+      "metric_id": "knee_flexion_rom",
+      "display_name_kr": "슬관절 굴곡 및 운동범위",
+      "display_name_en": "Knee Flexion / Knee ROM",
+      "category": "side_joint_rom",
+      "view": "side",
+      "source_type": "motionmetrix_target",
+      "model_role": "target_regression",
+      "required_level": "core",
+      "required_points": [
+        23,
+        24,
+        25,
+        26,
+        27,
+        28
+      ],
+      "derived_points": [
+        "left_thigh_line",
+        "left_shank_line",
+        "right_thigh_line",
+        "right_shank_line"
+      ],
+      "calculation_basis_kr": "고관절-무릎 대퇴선과 무릎-발목 하퇴선 사이의 각도",
+      "ui_help_kr": "고객은 착지시 굴곡각과 유각기 최대굴곡만 입력합니다. 좌/우 ROM, 전체 평균, 좌우 차이는 자동 계산되어 최종 비교표와 export에 반영됩니다.",
+      "fields": [
+        {
+          "field_id": "left_knee_flexion_landing_deg",
+          "label_kr": "왼쪽 착지시 굴곡각",
+          "type": "number",
+          "unit": "deg",
+          "required": true
+        },
+        {
+          "field_id": "left_knee_flexion_swing_max_deg",
+          "label_kr": "왼쪽 유각기 최대굴곡",
+          "type": "number",
+          "unit": "deg",
+          "required": true
+        },
+        {
+          "field_id": "right_knee_flexion_landing_deg",
+          "label_kr": "오른쪽 착지시 굴곡각",
+          "type": "number",
+          "unit": "deg",
+          "required": true
+        },
+        {
+          "field_id": "left_knee_flexion_stance_max_deg",
+          "label_kr": "왼쪽 지지기 최대굴곡",
+          "type": "number",
+          "unit": "deg",
+          "required": false,
+          "ui_help_kr": "MotionMetrix Gait Characteristics의 Max Knee Flexion @ stance Left 값이 있으면 입력합니다."
+        },
+        {
+          "field_id": "right_knee_flexion_stance_max_deg",
+          "label_kr": "오른쪽 지지기 최대굴곡",
+          "type": "number",
+          "unit": "deg",
+          "required": false,
+          "ui_help_kr": "MotionMetrix Gait Characteristics의 Max Knee Flexion @ stance Right 값이 있으면 입력합니다."
+        },
+        {
+          "field_id": "right_knee_flexion_swing_max_deg",
+          "label_kr": "오른쪽 유각기 최대굴곡",
+          "type": "number",
+          "unit": "deg",
+          "required": true
+        }
+      ]
+    },
+    {
+      "metric_id": "shank_angle",
+      "display_name_kr": "정강이 각도",
+      "display_name_en": "Shank Angle",
+      "category": "side_joint_rom",
+      "view": "side",
+      "source_type": "motionmetrix_target",
+      "model_role": "target_regression",
+      "required_level": "core",
+      "required_points": [
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32
+      ],
+      "derived_points": [
+        "left_shank_line",
+        "right_shank_line",
+        "vertical_axis",
+        "contact_events"
+      ],
+      "calculation_basis_kr": "최초 착지 순간 무릎-발목 하퇴선과 발목을 지나는 수직선 사이의 각도",
+      "ui_help_kr": "측면 최초 착지 순간의 정강이 각도입니다. v0.5.5에서도 슬관절 운동범위 다음에 배치하며, Skeleton 평균값은 착지 이벤트 기준으로 계산합니다.",
+      "fields": [
+        {
+          "field_id": "shank_angle_mean_signed_deg",
+          "label_kr": "MotionMetrix Shank Angle 평균값",
+          "type": "number",
+          "unit": "deg",
+          "required": true
+        }
+      ]
+    },
+    {
+      "metric_id": "foot_strike_type",
+      "display_name_kr": "착지 타입",
+      "display_name_en": "Foot Strike Type",
+      "category": "side_manual_label",
+      "view": "side",
+      "source_type": "manual_label",
+      "model_role": "manual_label",
+      "required_level": "core",
+      "required_points": [
+        27,
+        28,
+        29,
+        30,
+        31,
+        32
+      ],
+      "derived_points": [
+        "left_foot_line",
+        "right_foot_line",
+        "ground_line"
+      ],
+      "calculation_basis_kr": "뒤꿈치가 먼저 닿으면 힐, 발 앞쪽이 먼저 닿으면 포어풋, 거의 동시에 닿으면 미드풋",
+      "ui_help_kr": "문서 기준상 MotionMetrix보다 수동 입력값을 우선합니다.",
+      "fields": [
+        {
+          "field_id": "left_foot_strike_type",
+          "label_kr": "왼쪽 착지 타입",
+          "type": "select",
+          "unit": "",
+          "required": true,
+          "options": [
+            "heel",
+            "midfoot",
+            "forefoot",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "right_foot_strike_type",
+          "label_kr": "오른쪽 착지 타입",
+          "type": "select",
+          "unit": "",
+          "required": true,
+          "options": [
+            "heel",
+            "midfoot",
+            "forefoot",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "session_representative_strike_type",
+          "label_kr": "세션 대표 착지 타입",
+          "type": "select",
+          "unit": "",
+          "required": false,
+          "options": [
+            "heel",
+            "midfoot",
+            "forefoot",
+            "mixed",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    {
+      "metric_id": "cadence",
+      "display_name_kr": "케이던스",
+      "display_name_en": "Cadence",
+      "category": "temporal_gait",
+      "view": "both",
+      "source_type": "motionmetrix_target",
+      "model_role": "target_regression",
+      "required_level": "core",
+      "required_points": [
+        27,
+        28,
+        29,
+        30,
+        31,
+        32
+      ],
+      "derived_points": [
+        "left_initial_contact_events",
+        "right_initial_contact_events"
+      ],
+      "calculation_basis_kr": "좌우 최초 착지 순간을 찾아 전체 스텝 수를 분당 스텝 수로 변환",
+      "ui_help_kr": "왼발/오른발 스텝 수는 입력하지 않고 평균 케이던스만 입력합니다.",
+      "fields": [
+        {
+          "field_id": "cadence_steps_per_min",
+          "label_kr": "MotionMetrix 평균/표준 케이던스",
+          "type": "number",
+          "unit": "steps/min",
+          "required": true
+        }
+      ]
+    },
+    {
+      "metric_id": "contact_time",
+      "display_name_kr": "지면접촉시간",
+      "display_name_en": "Contact Time",
+      "category": "temporal_gait",
+      "view": "side",
+      "source_type": "motionmetrix_target",
+      "model_role": "target_regression",
+      "required_level": "core",
+      "required_points": [
+        29,
+        30,
+        31,
+        32
+      ],
+      "derived_points": [
+        "contact_start_event",
+        "contact_end_event",
+        "ground_line"
+      ],
+      "calculation_basis_kr": "뒤꿈치 또는 발끝이 지면선에 도달한 순간부터 뒤꿈치와 발끝이 모두 지면에서 떨어지는 순간까지",
+      "ui_help_kr": "좌우 구분 없이 MotionMetrix 평균 지면접촉시간만 ms 단위로 입력합니다.",
+      "fields": [
+        {
+          "field_id": "contact_time_mean_ms",
+          "label_kr": "MotionMetrix 지면접촉시간 평균값",
+          "type": "number",
+          "unit": "ms",
+          "required": true,
+          "ui_help_kr": "MotionMetrix 화면은 초(s)로 표시됩니다. 예: 0.225s는 225ms로 입력하거나, 저장 시 초 단위 비교값으로 자동 변환됩니다."
+        }
+      ]
+    },
+    {
+      "metric_id": "vertical_oscillation",
+      "display_name_kr": "수직 진폭",
+      "display_name_en": "Vertical Oscillation",
+      "category": "side_biomechanics",
+      "view": "side",
+      "source_type": "motionmetrix_target",
+      "model_role": "target_regression",
+      "required_level": "core",
+      "required_points": [
+        23,
+        24,
+        29,
+        30,
+        31,
+        32
+      ],
+      "derived_points": [
+        "pelvis_center",
+        "contact_events"
+      ],
+      "calculation_basis_kr": "골반 중심의 수직 방향 진폭을 착지 주기 기준으로 측정",
+      "ui_help_kr": "고객 요청에 따라 좌우값은 입력하지 않고 전체 평균값만 mm 단위로 입력합니다.",
+      "fields": [
+        {
+          "field_id": "vertical_oscillation_mean_mm",
+          "label_kr": "MotionMetrix Vertical Displacement 평균값",
+          "type": "number",
+          "unit": "mm",
+          "required": true,
+          "ui_help_kr": "MotionMetrix Running Performance 화면의 Vertical Displacement(mm) 값을 입력합니다."
+        }
+      ]
+    },
+    {
+      "metric_id": "step_stride_length",
+      "display_name_kr": "보폭 / 스트라이드 길이",
+      "display_name_en": "Step Length / Stride Length",
+      "category": "side_derived_later",
+      "view": "side",
+      "source_type": "derived_later",
+      "model_role": "feature_later",
+      "required_level": "recommended",
+      "required_points": [
+        29,
+        30,
+        31,
+        32
+      ],
+      "derived_points": [
+        "left_initial_contact_events",
+        "right_initial_contact_events"
+      ],
+      "calculation_basis_kr": "한 발 착지부터 반대 발 착지까지는 Step Length, 같은 발 다음 착지까지는 Stride Length",
+      "ui_help_kr": "러닝머신 속도와 timestamp/FPS를 함께 사용해 3차에서 계산합니다. 입력 단위 선택값을 기준으로 Export 시 표준 단위로 정규화합니다.",
+      "fields": [
+        {
+          "field_id": "step_length_mean_cm",
+          "label_kr": "Step Length 평균",
+          "type": "number",
+          "unit": "cm",
+          "required": false
+        },
+        {
+          "field_id": "stride_length_mean_cm",
+          "label_kr": "Stride Length 평균",
+          "type": "number",
+          "unit": "cm",
+          "required": false
+        }
+      ]
+    },
+    {
+      "metric_id": "flight_time",
+      "display_name_kr": "비행시간",
+      "display_name_en": "Flight Time",
+      "category": "temporal_gait",
+      "view": "side",
+      "source_type": "derived_later",
+      "model_role": "feature_later",
+      "required_level": "recommended",
+      "required_points": [
+        29,
+        30,
+        31,
+        32
+      ],
+      "derived_points": [
+        "toe_off_event",
+        "opposite_initial_contact_event"
+      ],
+      "calculation_basis_kr": "한쪽 발이 완전히 떨어진 순간부터 반대쪽 발이 처음 접촉하는 순간까지",
+      "ui_help_kr": "Running Economy 학습 입력 후보로 사용합니다. 입력 단위 선택값을 기준으로 Export 시 표준 단위로 정규화합니다.",
+      "fields": [
+        {
+          "field_id": "flight_time_mean_ms",
+          "label_kr": "비행시간 전체 평균",
+          "type": "number",
+          "unit": "ms",
+          "required": false
+        }
+      ]
+    },
+    {
+      "metric_id": "pelvic_drop",
+      "display_name_kr": "골반 낙하 / 골반 불균형",
+      "display_name_en": "Pelvic Drop",
+      "category": "rear_biomechanics",
+      "view": "rear",
+      "source_type": "skeleton_only",
+      "model_role": "skeleton_feature",
+      "required_level": "optional",
+      "required_points": [
+        23,
+        24,
+        27,
+        28
+      ],
+      "derived_points": [
+        "pelvis_line",
+        "support_foot"
+      ],
+      "calculation_basis_kr": "한 발 지지 구간에서 23-24 골반선이 얼마나 기울어지는지 측정",
+      "ui_help_kr": "좌우 세부값보다 평균값 중심으로 입력합니다. 상세 좌우 값은 필요 시 고급 데이터에서 확인합니다.\n후면 지표는 고객 피드백에 따라 MotionMetrix 직접 입력값을 받지 않고 Skeleton-only 참고값으로 관리합니다.",
+      "fields": [
+        {
+          "field_id": "pelvic_drop_mean_deg",
+          "label_kr": "골반 낙하 Skeleton 평균값",
+          "type": "number",
+          "unit": "deg",
+          "required": false
+        }
+      ]
+    },
+    {
+      "metric_id": "knee_medial_collapse",
+      "display_name_kr": "무릎 안쪽 붕괴",
+      "display_name_en": "Knee Medial Collapse",
+      "category": "rear_biomechanics",
+      "view": "rear",
+      "source_type": "skeleton_only",
+      "model_role": "skeleton_feature",
+      "required_level": "optional",
+      "required_points": [
+        23,
+        24,
+        25,
+        26,
+        27,
+        28
+      ],
+      "derived_points": [
+        "left_hip_ankle_line",
+        "right_hip_ankle_line"
+      ],
+      "calculation_basis_kr": "한 발 지지 시 무릎이 고관절-발목 선보다 안쪽으로 들어오는 정도",
+      "ui_help_kr": "평균값 중심으로 입력합니다. 단위/기준은 고객 측 MotionMetrix 또는 수동 기준에 맞춰 원 단위 그대로 저장합니다.\n후면 지표는 고객 피드백에 따라 MotionMetrix 직접 입력값을 받지 않고 Skeleton-only 참고값으로 관리합니다.",
+      "fields": [
+        {
+          "field_id": "knee_medial_collapse_mean",
+          "label_kr": "무릎 안쪽 붕괴 Skeleton 평균값",
+          "type": "number",
+          "unit": "raw",
+          "required": false
+        }
+      ]
+    },
+    {
+      "metric_id": "step_width_crossover",
+      "display_name_kr": "스텝 폭 / 크로스오버",
+      "display_name_en": "Step Width / Crossover",
+      "category": "rear_biomechanics",
+      "view": "rear",
+      "source_type": "skeleton_only",
+      "model_role": "skeleton_feature",
+      "required_level": "optional",
+      "required_points": [
+        27,
+        28,
+        29,
+        30,
+        31,
+        32
+      ],
+      "derived_points": [
+        "body_center_line",
+        "left_foot_contact_point",
+        "right_foot_contact_point"
+      ],
+      "calculation_basis_kr": "착지 순간 양발의 좌우 간격을 측정하고 발이 몸의 중심선을 넘으면 크로스오버 경향으로 판단",
+      "ui_help_kr": "고객 확인용은 평균 스텝 폭과 크로스오버 경향 중심으로 입력합니다.\n후면 지표는 고객 피드백에 따라 MotionMetrix 직접 입력값을 받지 않고 Skeleton-only 참고값으로 관리합니다.",
+      "fields": [
+        {
+          "field_id": "step_width_mean_mm",
+          "label_kr": "스텝 폭 Skeleton 평균값",
+          "type": "number",
+          "unit": "mm",
+          "required": false
+        },
+        {
+          "field_id": "crossover_tendency",
+          "label_kr": "크로스오버 경향",
+          "type": "select",
+          "unit": "",
+          "required": false,
+          "options": [
+            "none",
+            "mild",
+            "clear",
+            "severe",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    {
+      "metric_id": "trunk_lateral_tilt",
+      "display_name_kr": "몸통 좌우 기울기",
+      "display_name_en": "Trunk Lateral Tilt",
+      "category": "rear_biomechanics",
+      "view": "rear",
+      "source_type": "skeleton_only",
+      "model_role": "skeleton_feature",
+      "required_level": "optional",
+      "required_points": [
+        11,
+        12,
+        23,
+        24
+      ],
+      "derived_points": [
+        "shoulder_center",
+        "pelvis_center",
+        "trunk_line"
+      ],
+      "calculation_basis_kr": "어깨 중심과 골반 중심을 연결한 선이 좌우로 얼마나 기울어지는지 측정",
+      "ui_help_kr": "좌우 세부값보다 평균값 중심으로 입력합니다.\n후면 지표는 고객 피드백에 따라 MotionMetrix 직접 입력값을 받지 않고 Skeleton-only 참고값으로 관리합니다.",
+      "fields": [
+        {
+          "field_id": "trunk_lateral_tilt_mean_deg",
+          "label_kr": "몸통 좌우 기울기 Skeleton 평균값",
+          "type": "number",
+          "unit": "deg",
+          "required": false
+        }
+      ]
+    },
+    {
+      "metric_id": "running_economy",
+      "display_name_kr": "러닝 효율",
+      "display_name_en": "Running Economy",
+      "category": "aggregate_motionmetrix",
+      "view": "side",
+      "source_type": "motionmetrix_target",
+      "model_role": "target_regression",
+      "required_level": "core",
+      "required_points": [],
+      "derived_points": [
+        "cadence",
+        "contact_time",
+        "flight_time",
+        "vertical_oscillation",
+        "overstride",
+        "braking_force",
+        "step_length",
+        "hip_rom",
+        "knee_rom",
+        "forward_lean"
+      ],
+      "calculation_basis_kr": "개별 스켈레톤 지표를 종합해 MotionMetrix Running Economy 값을 예측",
+      "ui_help_kr": "MotionMetrix 값을 그대로 직접 입력하며 값이 낮을수록 효율적인 것으로 해석합니다.",
+      "fields": [
+        {
+          "field_id": "running_economy_j_kg_m",
+          "label_kr": "MotionMetrix Running Economy",
+          "type": "number",
+          "unit": "J/kg/m",
+          "required": true
+        }
+      ]
+    },
+    {
+      "metric_id": "running_type",
+      "display_name_kr": "러닝 타입",
+      "display_name_en": "Running Type",
+      "category": "aggregate_motionmetrix",
+      "view": "both",
+      "source_type": "motionmetrix_target",
+      "model_role": "target_classification",
+      "required_level": "core",
+      "required_points": [],
+      "derived_points": [
+        "cadence",
+        "contact_time",
+        "vertical_oscillation",
+        "overstride",
+        "braking_force",
+        "hip_rom",
+        "knee_rom",
+        "shank_angle",
+        "foot_strike_type",
+        "forward_lean",
+        "pelvic_drop",
+        "running_speed_kmh",
+        "height_cm",
+        "weight_kg"
+      ],
+      "calculation_basis_kr": "여러 러닝 지표를 종합해 MotionMetrix 기준 러닝 타입을 분류 학습",
+      "ui_help_kr": "MotionMetrix 내부 분류식은 공개되어 있지 않으므로 스마트폰 지표와 MotionMetrix 타입을 연결해 분류 모델로 학습합니다.",
+      "fields": [
+        {
+          "field_id": "running_type",
+          "label_kr": "MotionMetrix Running Type",
+          "type": "select",
+          "unit": "",
+          "required": true,
+          "options": [
+            "Long Strider",
+            "Power Racer",
+            "Eco Sprinter",
+            "Quick Stepper",
+            "Constant Glider",
+            "Easy Strider",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    {
+      "metric_id": "optional_motionmetrix_extras",
+      "display_name_kr": "추가 MotionMetrix 항목",
+      "display_name_en": "Optional MotionMetrix Extras",
+      "category": "optional_motionmetrix",
+      "view": "both",
+      "source_type": "motionmetrix_target",
+      "model_role": "optional_target_regression",
+      "required_level": "optional",
+      "required_points": [],
+      "derived_points": [],
+      "calculation_basis_kr": "MotionMetrix 결과지에 값이 제공되는 경우 선택적으로 입력",
+      "ui_help_kr": "없으면 비워도 저장 및 Export가 가능합니다.",
+      "fields": [
+        {
+          "field_id": "vertical_force_max_optional",
+          "label_kr": "최대 수직력",
+          "type": "number",
+          "unit": "raw",
+          "required": false
+        },
+        {
+          "field_id": "lateral_force_max_optional",
+          "label_kr": "최대 측방력",
+          "type": "number",
+          "unit": "raw",
+          "required": false
+        },
+        {
+          "field_id": "stride_rating_optional",
+          "label_kr": "스트라이드 평점",
+          "type": "number",
+          "unit": "score",
+          "required": false
+        }
+      ]
+    }
+  ]
+}

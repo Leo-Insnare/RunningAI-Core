@@ -1,0 +1,2 @@
+﻿session_id,is_ready_for_modeling,missing_core_count,video_missing_count,video_missing_fields,range_warning_count,range_warning_details,preview_count,latest_preview_metric_id
+SAMPLE_001,True,0,0,,0,,0,

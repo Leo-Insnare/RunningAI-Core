@@ -1,0 +1,14 @@
+{
+  "side_static_video_path": "sample_data/sample_session/videos/side_static_sample.mp4",
+  "side_static_original_filename": "side_static_sample.mp4",
+  "side_static_size_mb": 0.028,
+  "side_running_video_path": "sample_data/sample_session/videos/side_running_sample.mp4",
+  "side_running_original_filename": "side_running_sample.mp4",
+  "side_running_size_mb": 0.028,
+  "rear_static_video_path": "sample_data/sample_session/videos/rear_static_sample.mp4",
+  "rear_static_original_filename": "rear_static_sample.mp4",
+  "rear_static_size_mb": 0.027,
+  "rear_running_video_path": "sample_data/sample_session/videos/rear_running_sample.mp4",
+  "rear_running_original_filename": "rear_running_sample.mp4",
+  "rear_running_size_mb": 0.028
+}

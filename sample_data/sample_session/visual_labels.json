@@ -1,0 +1,20 @@
+{
+  "running_like_walking_strength": "none",
+  "running_like_walking_direction": "not_applicable",
+  "running_like_walking_memo": "샘플 입력값",
+  "waddling_strength": "none",
+  "waddling_direction": "not_applicable",
+  "waddling_memo": "샘플 입력값",
+  "left_right_asymmetry_strength": "mild",
+  "left_right_asymmetry_direction": "right",
+  "left_right_asymmetry_memo": "우측 지지 시 약한 흔들림 예시",
+  "arm_motion_asymmetry_strength": "mild",
+  "arm_motion_asymmetry_direction": "left",
+  "arm_motion_asymmetry_memo": "좌측 팔 스윙이 약간 작음 예시",
+  "upper_body_lateral_sway_strength": "none",
+  "upper_body_lateral_sway_direction": "not_applicable",
+  "upper_body_lateral_sway_memo": "샘플 입력값",
+  "insufficient_knee_lift_strength": "none",
+  "insufficient_knee_lift_direction": "not_applicable",
+  "insufficient_knee_lift_memo": "샘플 입력값"
+}

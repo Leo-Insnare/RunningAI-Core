@@ -1,0 +1,27 @@
+{
+  "artifact_type": "overstride_final_affine_inference",
+  "model_version": "final-20260825",
+  "canonical_training_artifact": "overstride_final_model.joblib",
+  "canonical_training_artifact_sha256": "5b47e6313e2935e558a091635ab70e27a66b9d3acc68fab76a5a782b644b5358",
+  "features": [
+    "base_pred_v016",
+    "knee_landing_event_median_deg",
+    "thigh_flexion_recalc_deg",
+    "hip_rom_recalc_deg"
+  ],
+  "intercept": 39.015477434947606,
+  "coefficients": {
+    "base_pred_v016": 0.1640102158957259,
+    "knee_landing_event_median_deg": -0.07040973637186267,
+    "thigh_flexion_recalc_deg": 0.24637514684092868,
+    "hip_rom_recalc_deg": 0.5013517045676588
+  },
+  "missing_feature_policy": "unmeasurable",
+  "reference_validation": {
+    "independent_fingerprint": "186aac9f5979f82aa17e53260aed89489718f073dd0299a0b30a29f277328ce2",
+    "patients_evaluated": 14,
+    "max_absolute_prediction_difference_mm": 2.842170943040401e-14,
+    "overstride_mae_mm": 19.15269505748062,
+    "strike_accuracy": 0.8571428571428571
+  }
+}
