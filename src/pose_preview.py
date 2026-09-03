@@ -178,7 +178,8 @@ def extract_frame(video_path: Path, timestamp_sec: float) -> Image.Image:
     
     source_fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
     
-    frame_index = max(0, int(timestamp_sec * fps))
+    frame_index = max(0, int(timestamp_sec * source_fps))
+    
     cap.set(cv2.CAP_PROP_POS_FRAMES, frame_index)
     ok, frame = cap.read()
     cap.release()
@@ -750,7 +751,7 @@ def create_overlay_video(
         except Exception:
             pass
     
-    fps = cap.get(cv2.CAP_PROP_FPS) or 30
+    source_fps = cap.get(cv2.CAP_PROP_FPS) or 30.0    
     
     # v0.5.8: all timing calculations are based on the actual video metadata FPS.
     # The selectable FPS only controls output-preview video size/smoothness.
