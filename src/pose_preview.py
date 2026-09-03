@@ -168,7 +168,16 @@ def extract_frame(video_path: Path, timestamp_sec: float) -> Image.Image:
     cap = cv2.VideoCapture(str(video_path))
     if not cap.isOpened():
         raise RuntimeError("영상을 열 수 없습니다.")
-    fps = cap.get(cv2.CAP_PROP_FPS) or 30
+    
+    orientation_auto = getattr(cv2, "CAP_PROP_ORIENTATION_AUTO", None)
+    if orientation_auto is not None:
+        try:
+            cap.set(orientation_auto, 1)
+        except Exception:
+            pass
+    
+    source_fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+    
     frame_index = max(0, int(timestamp_sec * fps))
     cap.set(cv2.CAP_PROP_POS_FRAMES, frame_index)
     ok, frame = cap.read()
@@ -733,8 +742,16 @@ def create_overlay_video(
     cap = cv2.VideoCapture(str(video_path))
     if not cap.isOpened():
         raise RuntimeError("영상을 열 수 없습니다.")
-
-    source_fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+    
+    orientation_auto = getattr(cv2, "CAP_PROP_ORIENTATION_AUTO", None)
+    if orientation_auto is not None:
+        try:
+            cap.set(orientation_auto, 1)
+        except Exception:
+            pass
+    
+    fps = cap.get(cv2.CAP_PROP_FPS) or 30
+    
     # v0.5.8: all timing calculations are based on the actual video metadata FPS.
     # The selectable FPS only controls output-preview video size/smoothness.
     if requested_output_fps <= 0:
