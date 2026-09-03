@@ -92,55 +92,73 @@ VIDEO_SLOTS = {
     "rear_running": "후면 달리기 영상",
 }
 
+def _file_digest(path: Path) -> str:
+    h = hashlib.sha1()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()[:12]
+
+
+def _preview_video_valid(path: Path) -> bool:
+    if not path.exists() or path.stat().st_size < 1024:
+        return False
+
+    try:
+        import cv2
+
+        cap = cv2.VideoCapture(str(path))
+        try:
+            if not cap.isOpened():
+                return False
+            width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH) or 0)
+            height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT) or 0)
+            frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
+            ok, frame = cap.read()
+            return (
+                width > 0
+                and height > 0
+                and frames > 0
+                and ok
+                and frame is not None
+            )
+        finally:
+            cap.release()
+    except Exception:
+        return False
+
+
 def _orientation_safe_preview(session_id: str, slot: str, source):
     cache_dir = session_path(session_id) / ".video_preview"
     cache_dir.mkdir(parents=True, exist_ok=True)
 
     if isinstance(source, Path):
         source_path = source
-        stat = source_path.stat()
-        cache_key = f"{source_path.stem}_{stat.st_size}_{stat.st_mtime_ns}"
+        digest = _file_digest(source_path)
     else:
         buffer = source.getbuffer()
         digest = hashlib.sha1(buffer).hexdigest()[:12]
         suffix = Path(source.name).suffix.lower() or ".mp4"
-        cache_key = f"{slot}_{digest}"
-        source_path = cache_dir / f"{cache_key}_source{suffix}"
-
+        source_path = cache_dir / f"{slot}_{digest}_source{suffix}"
         if not source_path.exists():
             source_path.write_bytes(buffer)
 
-    normalized_path = cache_dir / f"{cache_key}_normalized.mp4"
+    normalized_path = cache_dir / f"{slot}_{digest}_preview_v2.mp4"
+    temp_path = cache_dir / f"{slot}_{digest}_preview_v2.tmp.mp4"
 
-    if normalized_path.exists() and normalized_path.stat().st_size > 0:
+    if _preview_video_valid(normalized_path):
         return normalized_path
 
     try:
-        import cv2
-    
-        cap = cv2.VideoCapture(str(source_path))
-        try:
-            orientation_prop = getattr(cv2, "CAP_PROP_ORIENTATION_META", None)
-            rotation = (
-                int(round(cap.get(orientation_prop)))
-                if cap.isOpened() and orientation_prop is not None
-                else 0
-            )
-        finally:
-            cap.release()
+        normalized_path.unlink(missing_ok=True)
+        temp_path.unlink(missing_ok=True)
     except Exception:
-        return source_path
-
-    rotation %= 360
-
-    if rotation == 0:
-        return source_path
+        pass
 
     try:
         import imageio_ffmpeg
 
         ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
-
         cmd = [
             ffmpeg_exe,
             "-y",
@@ -152,37 +170,42 @@ def _orientation_safe_preview(session_id: str, slot: str, source):
             "-map_metadata",
             "-1",
             "-an",
+            "-vf",
+            "scale=w=min(720\\,iw):h=-2,fps=30",
             "-c:v",
             "libx264",
             "-preset",
-            "veryfast",
+            "ultrafast",
             "-crf",
-            "23",
+            "28",
             "-pix_fmt",
             "yuv420p",
+            "-tag:v",
+            "avc1",
             "-movflags",
             "+faststart",
-            str(normalized_path),
+            str(temp_path),
         ]
-
         proc = subprocess.run(
             cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            timeout=180,
+            timeout=240,
         )
-
-        if (
-            proc.returncode == 0
-            and normalized_path.exists()
-            and normalized_path.stat().st_size > 0
-        ):
+        if proc.returncode == 0 and _preview_video_valid(temp_path):
+            temp_path.replace(normalized_path)
             return normalized_path
     except Exception:
         pass
+    finally:
+        try:
+            temp_path.unlink(missing_ok=True)
+        except Exception:
+            pass
 
     return source_path
-    
+
+
 def init_state():
     st.session_state.setdefault("current_session_id", "")
     st.session_state.setdefault("loaded_once", False)
@@ -542,11 +565,12 @@ def tab_videos():
                     st.success(f"영상 저장 완료: {rel}")
             with c2:
                 st.caption("저장 후 아래 'Skeleton 결과 영상 생성'에서 해당 영상을 선택할 수 있습니다.")
-            preview_path = _orientation_safe_preview(
-                session_id,
-                slot,
-                uploaded,
-            )
+            with st.spinner("영상 미리보기 준비 중..."):
+                preview_path = _orientation_safe_preview(
+                    session_id,
+                    slot,
+                    uploaded,
+                )
             st.video(str(preview_path))
 
     st.markdown("### 2) 저장된 원본 영상")
@@ -727,7 +751,7 @@ def _render_browser_mp4_player(path: Path, key: str, height: int = 520):
             f"""
             <div style="width: 100%; background: #111; border-radius: 10px; padding: 8px; box-sizing: border-box;">
               <video id="{key}" controls playsinline preload="metadata" style="width: 100%; max-height: {height}px; background: #000; border-radius: 8px;">
-                <source src="data:video/mp4;base64,{encoded}" type='video/mp4; codecs="avc1.42E01E"'>
+                <source src="data:video/mp4;base64,{encoded}" type="video/mp4">
                 Your browser does not support the MP4 video tag.
               </video>
             </div>
@@ -971,11 +995,12 @@ def _render_uploaded_video_status(session_id: str):
         st.markdown("#### 측면 달리기 영상 · 필수")
         if side:
             st.success(f"저장 완료 · {side.name}")
-            side_preview = _orientation_safe_preview(
-                session_id,
-                "side_running",
-                side,
-            )
+            with st.spinner("측면 영상 미리보기 준비 중..."):
+                side_preview = _orientation_safe_preview(
+                    session_id,
+                    "side_running",
+                    side,
+                )
             st.video(str(side_preview))
 
         else:
@@ -984,11 +1009,12 @@ def _render_uploaded_video_status(session_id: str):
         st.markdown("#### 후면 달리기 영상 · 선택")
         if rear:
             st.success(f"저장 완료 · {rear.name}")
-            rear_preview = _orientation_safe_preview(
-                session_id,
-                "rear_running",
-                rear,
-            )
+            with st.spinner("후면 영상 미리보기 준비 중..."):
+                rear_preview = _orientation_safe_preview(
+                    session_id,
+                    "rear_running",
+                    rear,
+                )
             st.video(str(rear_preview))
 
         else:
@@ -1020,11 +1046,12 @@ def tab_analysis_videos():
         )
 
         if uploaded is not None:
-            preview_path = _orientation_safe_preview(
-                session_id,
-                slot,
-                uploaded,
-            )
+            with st.spinner("영상 미리보기 준비 중..."):
+                preview_path = _orientation_safe_preview(
+                    session_id,
+                    slot,
+                    uploaded,
+                )
             st.video(str(preview_path))
 
             if st.button(

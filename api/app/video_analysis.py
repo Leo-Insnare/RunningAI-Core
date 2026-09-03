@@ -83,6 +83,12 @@ def _probe_video(path: Path) -> dict[str, float | int | None]:
     if not cap.isOpened():
         cap.release()
         raise ValueError("Uploaded MP4 could not be opened.")
+    orientation_auto = getattr(cv2, "CAP_PROP_ORIENTATION_AUTO", None)
+    if orientation_auto is not None:
+        try:
+            cap.set(orientation_auto, 1)
+        except Exception:
+            pass
     fps = float(cap.get(cv2.CAP_PROP_FPS) or 0.0)
     frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH) or 0)

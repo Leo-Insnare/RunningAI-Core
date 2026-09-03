@@ -162,24 +162,29 @@ def _pil_to_rgb_array(image: Image.Image) -> np.ndarray:
     return np.array(image.convert("RGB"))
 
 
-def extract_frame(video_path: Path, timestamp_sec: float) -> Image.Image:
+def _enable_orientation_auto(cap) -> None:
     if cv2 is None:
-        raise RuntimeError("OpenCV가 설치되어 있지 않습니다.")
-    cap = cv2.VideoCapture(str(video_path))
-    if not cap.isOpened():
-        raise RuntimeError("영상을 열 수 없습니다.")
-    
+        return
     orientation_auto = getattr(cv2, "CAP_PROP_ORIENTATION_AUTO", None)
     if orientation_auto is not None:
         try:
             cap.set(orientation_auto, 1)
         except Exception:
             pass
-    
+
+
+def extract_frame(video_path: Path, timestamp_sec: float) -> Image.Image:
+    if cv2 is None:
+        raise RuntimeError("OpenCV가 설치되어 있지 않습니다.")
+    cap = cv2.VideoCapture(str(video_path))
+    if not cap.isOpened():
+        raise RuntimeError("영상을 열 수 없습니다.")
+    _enable_orientation_auto(cap)
+
     source_fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
-    
+
     frame_index = max(0, int(timestamp_sec * source_fps))
-    
+
     cap.set(cv2.CAP_PROP_POS_FRAMES, frame_index)
     ok, frame = cap.read()
     cap.release()
@@ -520,8 +525,6 @@ def _transcode_to_browser_mp4(input_video: Path, output_video: Path) -> dict[str
         "yuv420p",
         "-profile:v",
         "baseline",
-        "-level",
-        "3.0",
         "-movflags",
         "+faststart",
         str(tmp_out),
@@ -605,8 +608,6 @@ def _open_browser_h264_pipe(output_video: Path, width: int, height: int, fps: fl
         "23",
         "-profile:v",
         "baseline",
-        "-level",
-        "3.0",
         "-pix_fmt",
         "yuv420p",
         "-tag:v",
@@ -621,7 +622,7 @@ def _open_browser_h264_pipe(output_video: Path, width: int, height: int, fps: fl
     except Exception as exc:
         return None, f"ffmpeg pipe open failed: {exc}"
 
-def _prepare_gif_frame(image: Image.Image, max_width: int = 720) -> Image.Image:
+def _prepare_gif_frame(image: Image.Image, max_width: int = 480) -> Image.Image:
     """Create a browser-safe animated preview frame.
 
     Streamlit's in-page MP4 player can fail depending on browser codec support,
@@ -743,16 +744,10 @@ def create_overlay_video(
     cap = cv2.VideoCapture(str(video_path))
     if not cap.isOpened():
         raise RuntimeError("영상을 열 수 없습니다.")
-    
-    orientation_auto = getattr(cv2, "CAP_PROP_ORIENTATION_AUTO", None)
-    if orientation_auto is not None:
-        try:
-            cap.set(orientation_auto, 1)
-        except Exception:
-            pass
-    
-    source_fps = cap.get(cv2.CAP_PROP_FPS) or 30.0    
-    
+    _enable_orientation_auto(cap)
+
+    source_fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+
     # v0.5.8: all timing calculations are based on the actual video metadata FPS.
     # The selectable FPS only controls output-preview video size/smoothness.
     if requested_output_fps <= 0:
@@ -803,9 +798,10 @@ def create_overlay_video(
     output_meta = out_dir / f"{slug}_meta.json"
 
     # First pass: analyze every source frame while reusing one MediaPipe Pose backend.
-    # static_image_mode=True preserves independent-frame detection semantics.
+    # Frames are decoded sequentially and only landmarks/features are retained in memory.
     frame_items: list[dict[str, Any]] = []
     try:
+        cap.set(cv2.CAP_PROP_POS_FRAMES, start_frame)
         with MP_POSE.Pose(
             static_image_mode=True,
             model_complexity=1,
@@ -813,10 +809,9 @@ def create_overlay_video(
             min_detection_confidence=0.5,
         ) as pose_backend:
             for processed, current_frame in enumerate(frame_indices):
-                cap.set(cv2.CAP_PROP_POS_FRAMES, current_frame)
                 ok, frame_bgr = cap.read()
                 if not ok:
-                    continue
+                    break
                 frame_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
                 image = Image.fromarray(frame_rgb)
                 points = _detect_landmarks(image, pose_backend=pose_backend)
@@ -833,7 +828,6 @@ def create_overlay_video(
                     {
                         "frame_index": current_frame,
                         "timestamp_sec": timestamp,
-                        "frame_rgb": frame_rgb if current_frame in overlay_frame_set else None,
                         "points": points,
                         "feature": feature,
                     }
@@ -846,77 +840,112 @@ def create_overlay_video(
     if not frame_items:
         raise RuntimeError("처리 가능한 프레임이 없습니다. 시작 시간과 영상 길이를 확인하세요.")
 
-    frame_rows = infer_contacts([item["feature"] for item in frame_items], manual_ground_y_px=settings.get("manual_ground_y_px"), contact_threshold_px=settings.get("contact_threshold_px"))
+    frame_rows = infer_contacts(
+        [item["feature"] for item in frame_items],
+        manual_ground_y_px=settings.get("manual_ground_y_px"),
+        contact_threshold_px=settings.get("contact_threshold_px"),
+    )
     for item, feature in zip(frame_items, frame_rows):
         item["feature"] = feature
     events = detect_gait_events(frame_rows, view_type=view_type)
     seconds = build_second_summary(frame_rows, events)
-    clip_summary = build_clip_summary(frame_rows, events, motionmetrix_values=_read_motionmetrix_values(session_id), session_meta=_read_session_meta(session_id))
+    clip_summary = build_clip_summary(
+        frame_rows,
+        events,
+        motionmetrix_values=_read_motionmetrix_values(session_id),
+        session_meta=_read_session_meta(session_id),
+    )
     clip_summary.update({"session_id": session_id, "view_type": view_type, "video_role": video_role, "metric_id": metric_id})
+
+    stats_rows: list[dict[str, Any]] = []
+    for item in frame_items:
+        points = item["points"]
+        feature = item["feature"]
+        stats = compute_reference_values(points, metric.get("metric_id", "")) if points else {"Status": "Pose landmark detection failed"}
+        legacy_row = {
+            "frame_index": feature.get("frame_index", ""),
+            "timestamp_sec": feature.get("timestamp_sec", ""),
+            "metric_id": metric_id,
+            "metric_name_kr": metric.get("display_name_kr", ""),
+            "metric_name_en": metric.get("display_name_en", ""),
+        }
+        legacy_row.update({str(k): v for k, v in stats.items()})
+        legacy_row.update(feature)
+        stats_rows.append(legacy_row)
+
+    # Second pass: re-read only for rendering. This avoids retaining hundreds of
+    # full-resolution RGB frames in memory on long/high-FPS uploads.
+    render_cap = cv2.VideoCapture(str(video_path))
+    if not render_cap.isOpened():
+        raise RuntimeError("결과 영상 생성을 위해 원본 영상을 다시 열 수 없습니다.")
+    _enable_orientation_auto(render_cap)
+    render_cap.set(cv2.CAP_PROP_POS_FRAMES, start_frame)
 
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
     writer = cv2.VideoWriter(str(raw_video), fourcc, output_fps, (width, height))
     if not writer.isOpened():
+        render_cap.release()
         raise RuntimeError("결과 영상 파일을 생성하지 못했습니다.")
 
     h264_width, h264_height = _even_video_size(width, height)
     h264_proc, h264_message = _open_browser_h264_pipe(output_video, h264_width, h264_height, output_fps)
     h264_write_error = ""
     gif_frames: list[Image.Image] = []
-    max_gif_frames = 80
-    gif_sample_every = max(1, int(math.ceil(len(frame_items) / max_gif_frames)))
-    stats_rows: list[dict[str, Any]] = []
+    max_gif_frames = 40
+    overlay_items = {item["frame_index"]: item for item in frame_items if item["frame_index"] in overlay_frame_set}
+    overlay_total = max(1, len(overlay_items))
+    gif_sample_every = max(1, int(math.ceil(overlay_total / max_gif_frames)))
 
     try:
         rendered_count = 0
-        for processed, item in enumerate(frame_items):
+        for current_frame in range(start_frame, max(start_frame + 1, end_frame)):
+            ok, frame_bgr = render_cap.read()
+            if not ok:
+                break
+            item = overlay_items.get(current_frame)
+            if item is None:
+                continue
+
             points = item["points"]
             feature = item["feature"]
             event = nearest_event(events, float(feature.get("timestamp_sec", 0)))
             stats = compute_reference_values(points, metric.get("metric_id", "")) if points else {"Status": "Pose landmark detection failed"}
-            if item.get("frame_rgb") is not None:
-                image = Image.fromarray(item["frame_rgb"])
-                overlay_img = _draw_pose_overlay_from_points(
-                    image,
-                    points,
-                    metric=metric,
-                    show_all=show_all,
-                    stats=stats,
-                    feature_row=feature,
-                    event=event,
-                    view_type=view_type,
-                    overlay_mode=overlay_mode,
-                )
-                if rendered_count % gif_sample_every == 0:
-                    gif_frames.append(_prepare_gif_frame(overlay_img))
-                overlay_rgb = np.array(overlay_img.convert("RGB"))
-                overlay_bgr = cv2.cvtColor(overlay_rgb, cv2.COLOR_RGB2BGR)
-                writer.write(overlay_bgr)
-                rendered_count += 1
-                if h264_proc is not None and h264_proc.stdin is not None and not h264_write_error:
+            frame_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
+            image = Image.fromarray(frame_rgb)
+            overlay_img = _draw_pose_overlay_from_points(
+                image,
+                points,
+                metric=metric,
+                show_all=show_all,
+                stats=stats,
+                feature_row=feature,
+                event=event,
+                view_type=view_type,
+                overlay_mode=overlay_mode,
+            )
+            if rendered_count % gif_sample_every == 0:
+                gif_frames.append(_prepare_gif_frame(overlay_img))
+            overlay_rgb = np.array(overlay_img.convert("RGB"))
+            overlay_bgr = cv2.cvtColor(overlay_rgb, cv2.COLOR_RGB2BGR)
+            writer.write(overlay_bgr)
+            rendered_count += 1
+
+            if h264_proc is not None and h264_proc.stdin is not None and not h264_write_error:
+                try:
+                    h264_frame = _crop_rgb_to_size(overlay_rgb, h264_width, h264_height)
+                    h264_proc.stdin.write(h264_frame.tobytes())
+                except Exception as exc:
+                    h264_write_error = f"ffmpeg pipe write failed: {exc}"
                     try:
-                        h264_frame = _crop_rgb_to_size(overlay_rgb, h264_width, h264_height)
-                        h264_proc.stdin.write(h264_frame.tobytes())
-                    except Exception as exc:
-                        h264_write_error = f"ffmpeg pipe write failed: {exc}"
-                        try:
-                            h264_proc.stdin.close()
-                        except Exception:
-                            pass
-                        h264_proc = None
-            legacy_row = {
-                "frame_index": feature.get("frame_index", ""),
-                "timestamp_sec": feature.get("timestamp_sec", ""),
-                "metric_id": metric_id,
-                "metric_name_kr": metric.get("display_name_kr", ""),
-                "metric_name_en": metric.get("display_name_en", ""),
-            }
-            legacy_row.update({str(k): v for k, v in stats.items()})
-            legacy_row.update(feature)
-            stats_rows.append(legacy_row)
+                        h264_proc.stdin.close()
+                    except Exception:
+                        pass
+                    h264_proc = None
+
             if progress_callback:
-                progress_callback(0.45 + min(0.45, (processed + 1) / len(frame_items) * 0.45))
+                progress_callback(0.45 + min(0.45, rendered_count / overlay_total * 0.45))
     finally:
+        render_cap.release()
         writer.release()
 
     h264_info: dict[str, Any] = {
@@ -1036,6 +1065,7 @@ def inspect_frame_features(session_id: str, video_path: Path, frame_index: int |
     cap = cv2.VideoCapture(str(video_path))
     if not cap.isOpened():
         raise RuntimeError("영상을 열 수 없습니다.")
+    _enable_orientation_auto(cap)
     source_fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
     if frame_index is None:
