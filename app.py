@@ -1,5 +1,7 @@
 from pathlib import Path
 import base64
+import hashlib
+import subprocess
 
 import pandas as pd
 import numpy as np
@@ -90,7 +92,97 @@ VIDEO_SLOTS = {
     "rear_running": "후면 달리기 영상",
 }
 
+def _orientation_safe_preview(session_id: str, slot: str, source):
+    cache_dir = session_path(session_id) / ".video_preview"
+    cache_dir.mkdir(parents=True, exist_ok=True)
 
+    if isinstance(source, Path):
+        source_path = source
+        stat = source_path.stat()
+        cache_key = f"{source_path.stem}_{stat.st_size}_{stat.st_mtime_ns}"
+    else:
+        buffer = source.getbuffer()
+        digest = hashlib.sha1(buffer).hexdigest()[:12]
+        suffix = Path(source.name).suffix.lower() or ".mp4"
+        cache_key = f"{slot}_{digest}"
+        source_path = cache_dir / f"{cache_key}_source{suffix}"
+
+        if not source_path.exists():
+            source_path.write_bytes(buffer)
+
+    normalized_path = cache_dir / f"{cache_key}_normalized.mp4"
+
+    if normalized_path.exists() and normalized_path.stat().st_size > 0:
+        return normalized_path
+
+    try:
+        import cv2
+    
+        cap = cv2.VideoCapture(str(source_path))
+        try:
+            orientation_prop = getattr(cv2, "CAP_PROP_ORIENTATION_META", None)
+            rotation = (
+                int(round(cap.get(orientation_prop)))
+                if cap.isOpened() and orientation_prop is not None
+                else 0
+            )
+        finally:
+            cap.release()
+    except Exception:
+        return source_path
+
+    rotation %= 360
+
+    if rotation == 0:
+        return source_path
+
+    try:
+        import imageio_ffmpeg
+
+        ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
+
+        cmd = [
+            ffmpeg_exe,
+            "-y",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-i",
+            str(source_path),
+            "-map_metadata",
+            "-1",
+            "-an",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "veryfast",
+            "-crf",
+            "23",
+            "-pix_fmt",
+            "yuv420p",
+            "-movflags",
+            "+faststart",
+            str(normalized_path),
+        ]
+
+        proc = subprocess.run(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=180,
+        )
+
+        if (
+            proc.returncode == 0
+            and normalized_path.exists()
+            and normalized_path.stat().st_size > 0
+        ):
+            return normalized_path
+    except Exception:
+        pass
+
+    return source_path
+    
 def init_state():
     st.session_state.setdefault("current_session_id", "")
     st.session_state.setdefault("loaded_once", False)
@@ -99,7 +191,6 @@ def init_state():
 
 def set_widget_value(field_id, value):
     st.session_state[widget_key(field_id)] = value
-
 
 def load_to_widgets(session_id):
     data = load_session(session_id)
@@ -451,7 +542,12 @@ def tab_videos():
                     st.success(f"영상 저장 완료: {rel}")
             with c2:
                 st.caption("저장 후 아래 'Skeleton 결과 영상 생성'에서 해당 영상을 선택할 수 있습니다.")
-            st.video(uploaded)
+            preview_path = _orientation_safe_preview(
+                session_id,
+                slot,
+                uploaded,
+            )
+            st.video(str(preview_path))
 
     st.markdown("### 2) 저장된 원본 영상")
     videos = existing_videos(session_id)
@@ -875,14 +971,26 @@ def _render_uploaded_video_status(session_id: str):
         st.markdown("#### 측면 달리기 영상 · 필수")
         if side:
             st.success(f"저장 완료 · {side.name}")
-            st.video(str(side))
+            side_preview = _orientation_safe_preview(
+                session_id,
+                "side_running",
+                side,
+            )
+            st.video(str(side_preview))
+
         else:
             st.warning("측면 달리기 영상이 필요합니다.")
     with c2:
         st.markdown("#### 후면 달리기 영상 · 선택")
         if rear:
             st.success(f"저장 완료 · {rear.name}")
-            st.video(str(rear))
+            rear_preview = _orientation_safe_preview(
+                session_id,
+                "rear_running",
+                rear,
+            )
+            st.video(str(rear_preview))
+
         else:
             st.info("후면 지표 확인이 필요한 경우 업로드하세요.")
 
@@ -899,20 +1007,38 @@ def tab_analysis_videos():
         ("side_running", "측면 달리기 영상", True),
         ("rear_running", "후면 달리기 영상", False),
     ]
+
     for slot, label, required in upload_specs:
         suffix = "필수" if required else "선택"
         st.markdown(f"#### {label} · {suffix}")
+
         uploaded = st.file_uploader(
             f"{label} 업로드",
             type=["mp4"],
             key=f"final_upload::{slot}",
             help="MP4, 최대 300MB, 최대 60초 기준",
         )
+
         if uploaded is not None:
-            st.video(uploaded)
-            if st.button(f"{label} 저장", key=f"final_save::{slot}", use_container_width=True):
+            preview_path = _orientation_safe_preview(
+                session_id,
+                slot,
+                uploaded,
+            )
+            st.video(str(preview_path))
+
+            if st.button(
+                f"{label} 저장",
+                key=f"final_save::{slot}",
+                use_container_width=True,
+            ):
                 filename = f"{slot}{Path(uploaded.name).suffix.lower()}"
-                rel = save_uploaded_file(session_id, uploaded, filename, slot=slot)
+                rel = save_uploaded_file(
+                    session_id,
+                    uploaded,
+                    filename,
+                    slot=slot,
+                )
                 save_current_session()
                 st.success(f"저장 완료: {rel}")
 
