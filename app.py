@@ -1021,6 +1021,251 @@ def _render_uploaded_video_status(session_id: str):
             st.info("후면 지표 확인이 필요한 경우 업로드하세요.")
 
 
+def _render_skeleton_result_generator(session_id: str):
+    st.divider()
+    st.markdown("### Skeleton 결과 영상 생성 / 다운로드")
+    render_skeleton_output_notice(
+        "🟦 저장된 측면/후면 영상에서 Skeleton Point와 참고 계산값이 표시된 결과 영상을 생성합니다. "
+        "생성된 MP4와 프레임별 CSV를 바로 다운로드할 수 있습니다."
+    )
+
+    videos = existing_videos(session_id)
+    if not videos:
+        st.info("먼저 측면 또는 후면 영상을 업로드하고 저장하세요.")
+        return
+
+    status = dependencies_status()
+    if not status["opencv"] or not status["mediapipe"]:
+        st.warning("Skeleton 결과 영상 생성을 위해서는 OpenCV와 MediaPipe Pose backend가 필요합니다.")
+        st.caption(dependency_message())
+        return
+
+    video_options = {video.name: video for video in videos}
+    selected_video_name = st.selectbox(
+        "결과 영상을 생성할 원본 영상",
+        list(video_options.keys()),
+        key="final_skeleton_result_video_source",
+    )
+
+    metric_candidates = _metric_options_for_video(selected_video_name)
+    metric_labels = {
+        f"{m['display_name_kr']} · {m['metric_id']}": m
+        for m in metric_candidates
+    }
+    selected_metric_label = st.selectbox(
+        "영상 위에 표시할 Skeleton/계산 항목",
+        list(metric_labels.keys()),
+        key="final_skeleton_result_video_metric",
+    )
+    metric = metric_labels[selected_metric_label]
+
+    st.caption(
+        "선택한 지표에 필요한 Skeleton Point는 노란색으로 강조됩니다. "
+        "전체 포인트 표시를 켜면 모든 주요 포인트가 함께 표시됩니다."
+    )
+
+    default_start_sec, default_duration_sec = _default_analysis_window(
+        session_id,
+        selected_video_name,
+    )
+
+    c1, c2, c3, c4, c5 = st.columns([1, 1, 1.25, 1, 1.25])
+    with c1:
+        start_sec = st.number_input(
+            "시작 시점(sec)",
+            min_value=0.0,
+            value=float(default_start_sec),
+            step=0.5,
+            key="final_skeleton_result_video_start",
+        )
+    with c2:
+        duration_sec = st.number_input(
+            "처리 길이(sec)",
+            min_value=0.5,
+            max_value=60.0,
+            value=float(default_duration_sec),
+            step=0.5,
+            key="final_skeleton_result_video_duration",
+        )
+    with c3:
+        output_fps_label = st.selectbox(
+            "결과 영상 출력 FPS",
+            ["원본 FPS 자동", "15 fps", "12 fps", "10 fps", "6 fps"],
+            key="final_skeleton_result_video_output_fps_mode",
+            help=(
+                "분석 FPS는 업로드 영상의 실제 FPS를 자동 사용합니다. "
+                "이 옵션은 다운로드용 결과 영상 용량/부드러움만 조절합니다."
+            ),
+        )
+        output_fps = (
+            0.0
+            if output_fps_label == "원본 FPS 자동"
+            else float(output_fps_label.split()[0])
+        )
+    with c4:
+        show_all = st.checkbox(
+            "전체 포인트 표시",
+            value=True,
+            key="final_skeleton_result_video_show_all",
+        )
+    with c5:
+        overlay_mode_label = st.selectbox(
+            "표시 방식",
+            ["전체 요약 Overlay", "지표별 상세 Overlay"],
+            key="final_skeleton_result_overlay_mode",
+        )
+
+    overlay_mode = (
+        "summary"
+        if overlay_mode_label == "전체 요약 Overlay"
+        else "detail"
+    )
+
+    st.caption(
+        "분석 FPS는 업로드 영상의 실제 메타데이터 FPS를 사용합니다. "
+        "위 FPS 옵션은 결과 영상 출력용이며 CSV raw/event 계산에는 원본 FPS가 적용됩니다."
+    )
+
+    if st.button(
+        "Skeleton 결과 영상 생성",
+        type="primary",
+        use_container_width=True,
+        key="final_skeleton_result_generate",
+    ):
+        progress = st.progress(0.0, text="Skeleton 결과 영상 생성 중...")
+        try:
+            meta = create_overlay_video(
+                session_id=session_id,
+                video_path=video_options[selected_video_name],
+                metric=metric,
+                start_sec=start_sec,
+                duration_sec=duration_sec,
+                output_fps=output_fps,
+                show_all=show_all,
+                overlay_mode=overlay_mode,
+                progress_callback=lambda p: progress.progress(
+                    p,
+                    text=f"Skeleton 결과 영상 생성 중... {int(p * 100)}%",
+                ),
+            )
+            progress.progress(1.0, text="Skeleton 결과 영상 생성 완료")
+            st.success("결과 영상 생성 완료")
+
+            result_video_path = BASE_DIR / meta["result_video_path"]
+            result_csv_path = BASE_DIR / meta["frame_stats_csv_path"]
+            result_gif_path = (
+                BASE_DIR / meta.get("browser_preview_path", "")
+                if meta.get("browser_preview_path")
+                else None
+            )
+
+            st.caption(
+                "앱 내 영상 플레이어입니다. 아래에서 같은 MP4 파일을 다운로드할 수도 있습니다."
+            )
+            _render_browser_mp4_player(
+                result_video_path,
+                key=f"final_skeleton_player_{result_video_path.stem}",
+            )
+
+            if result_gif_path and result_gif_path.exists():
+                with st.expander("보조 GIF Preview 보기", expanded=False):
+                    st.image(
+                        result_gif_path.read_bytes(),
+                        use_container_width=True,
+                    )
+
+            dc1, dc2, dc3 = st.columns(3)
+            with dc1:
+                _download_file_button(
+                    result_video_path,
+                    "결과 영상 MP4 다운로드",
+                    "video/mp4",
+                    key=f"final_skeleton_download_video::{result_video_path.name}",
+                )
+            with dc2:
+                _download_file_button(
+                    result_csv_path,
+                    "프레임별 참고 데이터 CSV 다운로드",
+                    "text/csv",
+                    key=f"final_skeleton_download_csv::{result_csv_path.name}",
+                )
+            with dc3:
+                if result_gif_path and result_gif_path.exists():
+                    _download_file_button(
+                        result_gif_path,
+                        "브라우저 Preview GIF 다운로드",
+                        "image/gif",
+                        key=f"final_skeleton_download_gif::{result_gif_path.name}",
+                    )
+
+            with st.expander("생성 상세 정보", expanded=False):
+                st.json(meta, expanded=False)
+
+            _render_processed_feature_tables(
+                meta,
+                prefix="final_skeleton_latest",
+            )
+        except Exception as exc:
+            progress.empty()
+            st.error(f"Skeleton 결과 영상 생성 실패: {exc}")
+
+    existing_results = processed_video_results(session_id)
+    if existing_results:
+        with st.expander("기존 생성 결과 다운로드", expanded=False):
+            for idx, meta in enumerate(reversed(existing_results[-5:])):
+                result_video_path = BASE_DIR / meta.get("result_video_path", "")
+                result_csv_path = BASE_DIR / meta.get("frame_stats_csv_path", "")
+                result_gif_path = (
+                    BASE_DIR / meta.get("browser_preview_path", "")
+                    if meta.get("browser_preview_path")
+                    else None
+                )
+
+                st.markdown(
+                    f"#### {meta.get('created_at', '')} · "
+                    f"{meta.get('metric_name_kr', meta.get('metric_id', ''))}"
+                )
+                st.caption(
+                    f"원본: {meta.get('source_video', '')} · "
+                    f"처리 프레임: {meta.get('frames_processed', '')} · "
+                    f"분석 FPS: {meta.get('analysis_fps', meta.get('source_fps', ''))} · "
+                    f"결과 영상 FPS: {meta.get('output_fps', '')}"
+                )
+
+                if result_video_path.exists():
+                    _render_browser_mp4_player(
+                        result_video_path,
+                        key=f"final_skeleton_old_player_{idx}_{result_video_path.stem}",
+                    )
+
+                c1, c2, c3 = st.columns(3)
+                with c1:
+                    _download_file_button(
+                        result_video_path,
+                        "결과 영상 MP4 다운로드",
+                        "video/mp4",
+                        key=f"final_skeleton_old_video::{idx}::{result_video_path.name}",
+                    )
+                with c2:
+                    _download_file_button(
+                        result_csv_path,
+                        "프레임별 CSV 다운로드",
+                        "text/csv",
+                        key=f"final_skeleton_old_csv::{idx}::{result_csv_path.name}",
+                    )
+                with c3:
+                    if result_gif_path and result_gif_path.exists():
+                        _download_file_button(
+                            result_gif_path,
+                            "Preview GIF 다운로드",
+                            "image/gif",
+                            key=f"final_skeleton_old_gif::{idx}::{result_gif_path.name}",
+                        )
+
+                if idx < len(existing_results[-5:]) - 1:
+                    st.divider()
+
+
 def tab_analysis_videos():
     st.subheader("2. 영상 업로드")
     st.write("측면 달리기 영상을 업로드하면 최종 AI 모델 분석을 실행할 수 있습니다. 후면 영상은 후면 자세 지표가 필요한 경우 추가합니다.")
@@ -1072,6 +1317,8 @@ def tab_analysis_videos():
     st.divider()
     _render_uploaded_video_status(session_id)
     st.caption("분석 실행 시 저장된 측면/후면 영상을 Pose/Skeleton feature로 변환한 뒤 Frozen v0.16 모델 결과를 생성합니다.")
+
+    _render_skeleton_result_generator(session_id)
 
 
 def _final_analysis_window(session_id: str, slot: str) -> tuple[float, float]:
