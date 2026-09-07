@@ -75,36 +75,31 @@ def _probe_video(path: Path) -> dict[str, float | int | None]:
     if str(PROJECT_ROOT) not in sys.path:
         sys.path.insert(0, str(PROJECT_ROOT))
     try:
-        import cv2
+        from src.pose_preview import probe_video_info
     except Exception as exc:
         raise RuntimeError("OpenCV is required for raw video analysis.") from exc
 
-    cap = cv2.VideoCapture(str(path))
-    if not cap.isOpened():
-        cap.release()
-        raise ValueError("Uploaded MP4 could not be opened.")
-    orientation_auto = getattr(cv2, "CAP_PROP_ORIENTATION_AUTO", None)
-    if orientation_auto is not None:
-        try:
-            cap.set(orientation_auto, 1)
-        except Exception:
-            pass
-    fps = float(cap.get(cv2.CAP_PROP_FPS) or 0.0)
-    frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
-    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH) or 0)
-    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT) or 0)
-    cap.release()
-    duration = frame_count / fps if fps > 0 and frame_count > 0 else None
+    try:
+        info = probe_video_info(path)
+    except Exception as exc:
+        raise ValueError("Uploaded MP4 could not be opened.") from exc
+
+    fps = float(info.get("fps") or 0.0)
+    frame_count = int(info.get("frame_count") or 0)
+    width = int(info.get("width") or 0)
+    height = int(info.get("height") or 0)
+    duration = info.get("duration_sec")
     if fps <= 0 or width <= 0 or height <= 0:
         raise ValueError("Uploaded MP4 metadata is invalid.")
-    if duration is not None and duration > MAX_VIDEO_DURATION_SEC + 0.25:
+    if duration is not None and float(duration) > MAX_VIDEO_DURATION_SEC + 0.25:
         raise ValueError("Video duration exceeds the 60 second limit.")
     return {
         "fps": fps,
         "frame_count": frame_count,
         "width": width,
         "height": height,
-        "duration_sec": duration,
+        "duration_sec": float(duration) if duration is not None else None,
+        "rotation_clockwise_deg": int(info.get("rotation_clockwise_deg") or 0),
     }
 
 

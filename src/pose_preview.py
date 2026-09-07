@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import json
 import math
+import re
 import shutil
 import subprocess
 import sys
@@ -23,6 +25,7 @@ from .gait_features import (
     direct_target_lines,
     infer_contacts,
     insight_lines,
+    is_low_fps,
     nearest_event,
     write_csv,
 )
@@ -162,27 +165,240 @@ def _pil_to_rgb_array(image: Image.Image) -> np.ndarray:
     return np.array(image.convert("RGB"))
 
 
-def _enable_orientation_auto(cap) -> None:
+def _set_orientation_auto(cap, enabled: bool) -> bool:
     if cv2 is None:
-        return
-    orientation_auto = getattr(cv2, "CAP_PROP_ORIENTATION_AUTO", None)
-    if orientation_auto is not None:
+        return False
+    prop = getattr(cv2, "CAP_PROP_ORIENTATION_AUTO", None)
+    if prop is None:
+        return False
+    try:
+        changed = bool(cap.set(prop, 1.0 if enabled else 0.0))
+        current = cap.get(prop)
+        return changed and bool(round(float(current))) == bool(enabled)
+    except Exception:
+        return False
+
+
+def _ffmpeg_executable() -> str | None:
+    if imageio_ffmpeg is None:
+        return None
+    try:
+        return imageio_ffmpeg.get_ffmpeg_exe()
+    except Exception:
+        return None
+
+
+def _parse_ffmpeg_video_info(text: str) -> tuple[int, int | None, int | None]:
+    rotation = 0
+    match = re.search(r"rotation of\s+(-?\d+(?:\.\d+)?)\s+degrees", text or "", re.IGNORECASE)
+    if match:
         try:
-            cap.set(orientation_auto, 1)
+            raw = float(match.group(1))
+            rotation = int(round((-raw) / 90.0) * 90) % 360
+        except Exception:
+            rotation = 0
+    else:
+        match = re.search(r"\brotate\s*:\s*(-?\d+(?:\.\d+)?)", text or "", re.IGNORECASE)
+        if match:
+            try:
+                raw = float(match.group(1))
+                rotation = int(round(raw / 90.0) * 90) % 360
+            except Exception:
+                rotation = 0
+
+    width = None
+    height = None
+    for line in (text or "").splitlines():
+        if "Video:" not in line:
+            continue
+        size = re.search(r"\b(\d{2,5})x(\d{2,5})(?:\s|,)", line)
+        if size:
+            width = int(size.group(1))
+            height = int(size.group(2))
+            break
+    return rotation, width, height
+
+
+def _probe_ffmpeg_video(video_path: Path) -> tuple[int, int | None, int | None, str]:
+    ffmpeg_exe = _ffmpeg_executable()
+    if not ffmpeg_exe:
+        return 0, None, None, "opencv"
+    try:
+        proc = subprocess.run(
+            [ffmpeg_exe, "-hide_banner", "-i", str(video_path)],
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+        text = f"{proc.stderr or ''}\n{proc.stdout or ''}"
+        rotation, width, height = _parse_ffmpeg_video_info(text)
+        return rotation, width, height, "ffmpeg"
+    except Exception:
+        return 0, None, None, "opencv"
+
+
+def probe_video_info(video_path: Path) -> dict[str, Any]:
+    if cv2 is None:
+        raise RuntimeError("OpenCV가 설치되어 있지 않습니다.")
+    path = Path(video_path)
+    cap = cv2.VideoCapture(str(path))
+    if not cap.isOpened():
+        cap.release()
+        raise RuntimeError("영상을 열 수 없습니다.")
+
+    _set_orientation_auto(cap, False)
+    fps = float(cap.get(cv2.CAP_PROP_FPS) or 0.0)
+    frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
+    raw_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH) or 0)
+    raw_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT) or 0)
+    orientation_meta = 0.0
+    orientation_prop = getattr(cv2, "CAP_PROP_ORIENTATION_META", None)
+    if orientation_prop is not None:
+        try:
+            orientation_meta = float(cap.get(orientation_prop) or 0.0)
+        except Exception:
+            orientation_meta = 0.0
+    cap.release()
+
+    rotation, encoded_width, encoded_height, source = _probe_ffmpeg_video(path)
+    if encoded_width is None or encoded_height is None:
+        encoded_width, encoded_height = raw_width, raw_height
+    if rotation == 0 and abs(orientation_meta) >= 45:
+        rotation = int(round(orientation_meta / 90.0) * 90) % 360
+        source = "opencv"
+
+    width, height = int(encoded_width or 0), int(encoded_height or 0)
+    if rotation in (90, 270):
+        width, height = height, width
+    duration = frame_count / fps if fps > 0 and frame_count > 0 else None
+    return {
+        "fps": fps,
+        "frame_count": frame_count,
+        "duration_sec": duration,
+        "source_width": int(encoded_width or 0),
+        "source_height": int(encoded_height or 0),
+        "width": width,
+        "height": height,
+        "rotation_clockwise_deg": rotation,
+        "orientation_source": source,
+    }
+
+
+def _normalized_video_valid(path: Path, expected_width: int, expected_height: int) -> bool:
+    if cv2 is None or not path.exists() or path.stat().st_size < 1024:
+        return False
+    cap = cv2.VideoCapture(str(path))
+    if not cap.isOpened():
+        cap.release()
+        return False
+    _set_orientation_auto(cap, False)
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH) or 0)
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT) or 0)
+    orientation = 0.0
+    orientation_prop = getattr(cv2, "CAP_PROP_ORIENTATION_META", None)
+    if orientation_prop is not None:
+        try:
+            orientation = float(cap.get(orientation_prop) or 0.0)
+        except Exception:
+            orientation = 0.0
+    ok, frame = cap.read()
+    cap.release()
+    if not ok or frame is None or abs(orientation) >= 45:
+        return False
+    if expected_width > 0 and expected_height > 0:
+        if width != expected_width or height != expected_height:
+            return False
+    return frame.shape[1] == width and frame.shape[0] == height
+
+
+def _prepare_analysis_video(video_path: Path, source_info: dict[str, Any] | None = None) -> tuple[Path, dict[str, Any]]:
+    path = Path(video_path)
+    info = dict(source_info or probe_video_info(path))
+    rotation = int(info.get("rotation_clockwise_deg") or 0) % 360
+    result = {
+        "source_rotation_deg": rotation,
+        "orientation_source": info.get("orientation_source", "unknown"),
+        "orientation_normalized": False,
+        "orientation_method": "source_pixels",
+    }
+    if rotation == 0:
+        return path, result
+
+    ffmpeg_exe = _ffmpeg_executable()
+    if not ffmpeg_exe:
+        raise RuntimeError("영상 방향 보정을 위해 FFmpeg가 필요합니다. requirements.txt 기준으로 imageio-ffmpeg를 설치해 주세요.")
+
+    stat = path.stat()
+    key_src = f"{path.resolve()}|{stat.st_size}|{stat.st_mtime_ns}|{rotation}"
+    key = hashlib.sha1(key_src.encode("utf-8", errors="ignore")).hexdigest()[:12]
+    cache_dir = path.parent / ".analysis_cache"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    output = cache_dir / f"{path.stem}_{key}.mp4"
+    expected_width = int(info.get("width") or 0)
+    expected_height = int(info.get("height") or 0)
+
+    if _normalized_video_valid(output, expected_width, expected_height):
+        result.update({"orientation_normalized": True, "orientation_method": "ffmpeg_cached"})
+        return output, result
+
+    tmp = output.with_suffix(".tmp.mp4")
+    cmd = [
+        ffmpeg_exe,
+        "-y",
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-i",
+        str(path),
+        "-map_metadata",
+        "-1",
+        "-an",
+        "-fps_mode",
+        "passthrough",
+        "-c:v",
+        "libx264",
+        "-preset",
+        "ultrafast",
+        "-crf",
+        "18",
+        "-pix_fmt",
+        "yuv420p",
+        "-tag:v",
+        "avc1",
+        "-movflags",
+        "+faststart",
+        str(tmp),
+    ]
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=240)
+        if proc.returncode != 0:
+            message = (proc.stderr or proc.stdout or "FFmpeg orientation normalization failed").strip()
+            raise RuntimeError(message[:500])
+        if not _normalized_video_valid(tmp, expected_width, expected_height):
+            raise RuntimeError("방향 보정 영상 검증에 실패했습니다.")
+        tmp.replace(output)
+    except Exception as exc:
+        try:
+            tmp.unlink(missing_ok=True)
         except Exception:
             pass
+        raise RuntimeError(f"영상 방향 보정에 실패했습니다: {exc}") from exc
+
+    result.update({"orientation_normalized": True, "orientation_method": "ffmpeg_autorotate"})
+    return output, result
 
 
 def extract_frame(video_path: Path, timestamp_sec: float) -> Image.Image:
     if cv2 is None:
         raise RuntimeError("OpenCV가 설치되어 있지 않습니다.")
-    cap = cv2.VideoCapture(str(video_path))
+    source_info = probe_video_info(video_path)
+    analysis_video, _ = _prepare_analysis_video(video_path, source_info)
+    cap = cv2.VideoCapture(str(analysis_video))
     if not cap.isOpened():
         raise RuntimeError("영상을 열 수 없습니다.")
-    _enable_orientation_auto(cap)
+    _set_orientation_auto(cap, False)
 
-    source_fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
-
+    source_fps = float(source_info.get("fps") or cap.get(cv2.CAP_PROP_FPS) or 30.0)
     frame_index = max(0, int(timestamp_sec * source_fps))
 
     cap.set(cv2.CAP_PROP_POS_FRAMES, frame_index)
@@ -275,6 +491,34 @@ def _fmt(v, unit=""):
     if v is None:
         return "N/A"
     return f"{v:.1f}{unit}"
+
+
+def _validate_pose_orientation(frame_items: list[dict[str, Any]]) -> dict[str, Any]:
+    torso_angles: list[float] = []
+    for item in frame_items:
+        points = item.get("points") or {}
+        shoulder = _midpoint(points, 11, 12)
+        pelvis = _midpoint(points, 23, 24)
+        angle = _line_angle_to_vertical(pelvis, shoulder)
+        if angle is not None and math.isfinite(float(angle)):
+            torso_angles.append(abs(float(angle)))
+
+    if len(torso_angles) < 10:
+        return {"checked": False, "sample_count": len(torso_angles), "median_torso_angle_deg": None}
+
+    median_angle = float(np.median(torso_angles))
+    p90_angle = float(np.percentile(torso_angles, 90))
+    if median_angle >= 60.0 and p90_angle >= 70.0:
+        raise RuntimeError(
+            "분석 프레임의 영상 방향이 비정상적으로 감지되었습니다. "
+            "원본 영상의 회전 정보 또는 촬영 방향을 확인해 주세요."
+        )
+    return {
+        "checked": True,
+        "sample_count": len(torso_angles),
+        "median_torso_angle_deg": round(median_angle, 3),
+        "p90_torso_angle_deg": round(p90_angle, 3),
+    }
 
 
 def compute_reference_values(points: dict[int, dict[str, float]], metric_id: str) -> dict[str, str]:
@@ -741,12 +985,14 @@ def create_overlay_video(
     video_role = _infer_video_role(video_path, view_type)
     settings = _analysis_settings(session_id, view_type)
 
-    cap = cv2.VideoCapture(str(video_path))
+    source_info = probe_video_info(video_path)
+    analysis_video_path, orientation_info = _prepare_analysis_video(video_path, source_info)
+    cap = cv2.VideoCapture(str(analysis_video_path))
     if not cap.isOpened():
         raise RuntimeError("영상을 열 수 없습니다.")
-    _enable_orientation_auto(cap)
+    _set_orientation_auto(cap, False)
 
-    source_fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+    source_fps = float(source_info.get("fps") or cap.get(cv2.CAP_PROP_FPS) or 30.0)
 
     # v0.5.8: all timing calculations are based on the actual video metadata FPS.
     # The selectable FPS only controls output-preview video size/smoothness.
@@ -840,6 +1086,8 @@ def create_overlay_video(
     if not frame_items:
         raise RuntimeError("처리 가능한 프레임이 없습니다. 시작 시간과 영상 길이를 확인하세요.")
 
+    orientation_sanity = _validate_pose_orientation(frame_items)
+
     frame_rows = infer_contacts(
         [item["feature"] for item in frame_items],
         manual_ground_y_px=settings.get("manual_ground_y_px"),
@@ -875,10 +1123,10 @@ def create_overlay_video(
 
     # Second pass: re-read only for rendering. This avoids retaining hundreds of
     # full-resolution RGB frames in memory on long/high-FPS uploads.
-    render_cap = cv2.VideoCapture(str(video_path))
+    render_cap = cv2.VideoCapture(str(analysis_video_path))
     if not render_cap.isOpened():
-        raise RuntimeError("결과 영상 생성을 위해 원본 영상을 다시 열 수 없습니다.")
-    _enable_orientation_auto(render_cap)
+        raise RuntimeError("결과 영상 생성을 위해 분석 영상을 다시 열 수 없습니다.")
+    _set_orientation_auto(render_cap, False)
     render_cap.set(cv2.CAP_PROP_POS_FRAMES, start_frame)
 
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
@@ -1031,7 +1279,7 @@ def create_overlay_video(
         "analysis_fps": round(float(source_fps), 3),
         "output_fps": output_fps,
         "output_fps_mode": output_fps_mode,
-        "low_fps_warning": "60fps 미만: timing/event 기반 지표 정밀 비교 제한" if float(source_fps) < 60 else "",
+        "low_fps_warning": "60fps 미만: timing/event 기반 지표 정밀 비교 제한" if is_low_fps(source_fps) else "",
         "analysis_frame_step": analysis_frame_step,
         "overlay_frame_step": overlay_frame_step,
         "frames_processed": len(frame_rows),
@@ -1044,6 +1292,16 @@ def create_overlay_video(
         "progress_direction": settings.get("progress_direction", "left_to_right"),
         "manual_ground_y_px": settings.get("manual_ground_y_px"),
         "contact_threshold_px": settings.get("contact_threshold_px"),
+        "source_rotation_deg": orientation_info.get("source_rotation_deg", 0),
+        "orientation_source": orientation_info.get("orientation_source", "unknown"),
+        "orientation_normalized": orientation_info.get("orientation_normalized", False),
+        "orientation_method": orientation_info.get("orientation_method", "source_pixels"),
+        "analysis_video_width": width,
+        "analysis_video_height": height,
+        "orientation_sanity_checked": orientation_sanity.get("checked", False),
+        "orientation_sanity_sample_count": orientation_sanity.get("sample_count", 0),
+        "orientation_sanity_median_torso_angle_deg": orientation_sanity.get("median_torso_angle_deg"),
+        "orientation_sanity_p90_torso_angle_deg": orientation_sanity.get("p90_torso_angle_deg"),
     }
     meta.update(transcode_info)
     meta.update(gif_info)
@@ -1062,11 +1320,13 @@ def inspect_frame_features(session_id: str, video_path: Path, frame_index: int |
         raise RuntimeError("OpenCV가 설치되어 있지 않습니다.")
     if MP_POSE is None:
         raise RuntimeError(dependency_message() or "MediaPipe Pose backend를 사용할 수 없습니다.")
-    cap = cv2.VideoCapture(str(video_path))
+    source_info = probe_video_info(video_path)
+    analysis_video, _ = _prepare_analysis_video(video_path, source_info)
+    cap = cv2.VideoCapture(str(analysis_video))
     if not cap.isOpened():
         raise RuntimeError("영상을 열 수 없습니다.")
-    _enable_orientation_auto(cap)
-    source_fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+    _set_orientation_auto(cap, False)
+    source_fps = float(source_info.get("fps") or cap.get(cv2.CAP_PROP_FPS) or 30.0)
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
     if frame_index is None:
         frame_index = int(max(0.0, float(timestamp_sec or 0.0)) * source_fps)

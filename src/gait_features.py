@@ -17,6 +17,17 @@ REAR_SKELETON_FEATURES = [
 ]
 
 
+NOMINAL_60_FPS_MIN = 59.0
+
+
+def is_low_fps(fps: float | int | None) -> bool:
+    try:
+        value = float(fps)
+    except (TypeError, ValueError):
+        return False
+    return 0 < value < NOMINAL_60_FPS_MIN
+
+
 def pt(points: dict[int, dict[str, float]], idx: int):
     if idx not in points:
         return None
@@ -713,7 +724,7 @@ def _event_window_around_peak(frame_rows: list[dict[str, Any]], foot: str, peak_
     # Add one endpoint frame for running-event contact time, but keep the raw
     # start/end frames in the event CSV for audit. At 30fps this is ~33 ms, which
     # matches the observed MotionMetrix gap better than a 1-3 frame contact.
-    if fps < 60 and end_i < len(frame_rows) - 1:
+    if is_low_fps(fps) and end_i < len(frame_rows) - 1:
         # v0.5.10: 30fps videos quantize contact time heavily. 14/15번
         # 디버그에서 toe-off가 1~2 frames 짧게 끊기는 패턴이 확인되어
         # 저FPS에서는 plateau endpoint를 최대 2 frames까지 보강한다.
@@ -905,7 +916,7 @@ def _build_event(rows: list[dict[str, Any]], start_i: int, end_i: int, foot: str
         "confidence_foot_strike": "medium",
         "confidence_event": "medium" if not incomplete else "low_clip_boundary",
         "source_fps": round(fps, 3),
-        "timing_confidence": "low_fps" if fps < 60 else "medium" if fps < 100 else "high",
+        "timing_confidence": "low_fps" if is_low_fps(fps) else "medium" if fps < 100 else "high",
         "missing_reason": "" if not incomplete else "toe-off not observed before clip end",
     }
 
@@ -1203,7 +1214,7 @@ def build_clip_summary(frame_rows: list[dict[str, Any]], events: list[dict[str, 
         fps_float = float(actual_fps)
     except Exception:
         fps_float = 0.0
-    timing_confidence = "low_fps" if fps_float and fps_float < 60 else "medium_fps" if fps_float and fps_float < 100 else "high_fps" if fps_float else "unknown"
+    timing_confidence = "low_fps" if is_low_fps(fps_float) else "medium_fps" if fps_float and fps_float < 100 else "high_fps" if fps_float else "unknown"
     mm_cadence = motionmetrix_values.get("cadence_steps_per_min") or motionmetrix_values.get("cadence_raw_value")
     try:
         expected_event_count_from_mm = round(float(mm_cadence) * duration / 60.0, 3)
@@ -1217,7 +1228,7 @@ def build_clip_summary(frame_rows: list[dict[str, Any]], events: list[dict[str, 
         "actual_video_fps": actual_fps,
         "analysis_fps": actual_fps,
         "timing_confidence": timing_confidence,
-        "low_fps_warning": "60fps 미만: Contact Time/Cadence/touch-down 지표 정밀 비교 제한" if fps_float and fps_float < 60 else "",
+        "low_fps_warning": "60fps 미만: Contact Time/Cadence/touch-down 지표 정밀 비교 제한" if is_low_fps(fps_float) else "",
         "user_input_side_fps": session_meta.get("side_video_fps", ""),
         "user_input_rear_fps": session_meta.get("rear_video_fps", ""),
         "event_count_raw": len(events),
